@@ -1,0 +1,13 @@
+fun fibo(n) {
+  if n <= 1 then
+    n
+  else
+    fibo(n-1) + fibo(n-2)
+}
+
+fibo(0) = 0
+fibo(1) = 1
+fibo(2) = 1
+fibo(3) = 2
+fibo(11) = 89
+fibo(19) = 4181

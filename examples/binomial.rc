@@ -1,0 +1,7 @@
+fun binom(n, k)
+    n! / ( k! * (n-k)! )
+
+choose(3, 1) = binom(3, 1)
+choose(5, 2) = binom(5, 2)
+choose(57, 19) = binom(57, 19)
+choose(281, 132) = binom(281, 132)

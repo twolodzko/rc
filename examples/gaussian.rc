@@ -1,0 +1,9 @@
+
+fun Phi(x)
+   ( 1 + erf( x / sqrt(2) ) ) / 2
+fun approx_equal(x, y)
+   |x - y| < 0.01
+
+approx_equal( Phi(1.0) - Phi(-1.0), 0.68 )
+approx_equal( Phi(2.0) - Phi(-2.0), 0.95 )
+approx_equal( Phi(3.0) - Phi(-3.0), 0.99 )
