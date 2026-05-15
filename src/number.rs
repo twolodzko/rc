@@ -501,7 +501,9 @@ impl Pow<&Number> for &Number {
 
 /// Compute x^(1/n)
 fn nth_root(x: Number, n: &BigInt) -> f64 {
-    if !x.is_negative() && n == &BigInt::from(2) {
+    if x.is_nan() {
+        f64::NAN
+    } else if !x.is_negative() && n == &BigInt::from(2) {
         x.to_f64().sqrt()
     } else if n == &BigInt::from(3) {
         x.to_f64().cbrt()
