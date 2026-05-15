@@ -493,6 +493,7 @@ impl Pow<&Number> for &Number {
             (Complex(x), Complex(p)) => Complex(x.powc(*p)),
             (_, Complex(p)) => Complex(self.to_complex().powc(*p)),
             // float powers
+            (_, Float(rhs)) if *rhs == 0.5 => self.sqrt(),
             _ => Float(self.powf(rhs.to_f64()).into()),
         }
     }
