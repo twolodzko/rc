@@ -6,6 +6,9 @@ use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 macro_rules! impl_is_method {
     ($($t:tt)*) => ($(
         pub fn $t(&self) -> bool {
+            if self.0.is_empty() {
+                return false;
+            }
             self.0.iter().all(|x| x.$t())
         }
     )*)

@@ -414,12 +414,12 @@ impl std::cmp::Ord for &Interval {
 
 impl std::fmt::Display for Interval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}{}{}", self.lower, Op::Both, self.upper)
+        write!(f, "{}{}{}", self.lower, Op::Interval, self.upper)
     }
 }
 
 impl std::fmt::Debug for Interval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?} {} {:?}", self.lower, Op::Both, self.upper)
+        write!(f, "{:?} {} {:?}", self.lower, Op::Interval, self.upper)
     }
 }

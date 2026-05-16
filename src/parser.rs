@@ -150,7 +150,7 @@ fn parse_expr(pairs: Pairs<Rule>) -> Result<Expr> {
             Rule::expression => parse_expr(primary.into_inner()),
             Rule::term => parse_expr(primary.into_inner()),
             Rule::name => {
-                let expr = match primary.as_str() {
+                let expr = match primary.as_str().to_lowercase().as_str() {
                     "nan" => Expr::Value(Algebra::Scalar(Number::NAN)),
                     "inf" => Expr::Value(Algebra::Scalar(Number::INFINITY)),
                     _ => Expr::Variable(primary.to_string()),
@@ -211,7 +211,7 @@ fn parse_expr(pairs: Pairs<Rule>) -> Result<Expr> {
                 Rule::ge => Op::Ge,
                 Rule::get => Op::Get,
                 Rule::gt => Op::Gt,
-                Rule::interval => Op::Both,
+                Rule::interval => Op::Interval,
                 Rule::is_in => Op::In,
                 Rule::le => Op::Le,
                 Rule::logical_and => Op::And,
