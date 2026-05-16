@@ -605,13 +605,7 @@ impl std::fmt::Display for Number {
                     write!(f, "{}", n)
                 }
             }
-            Float(n) => {
-                if n.is_nan() {
-                    write!(f, "nan")
-                } else {
-                    write_scaled!(f, n)
-                }
-            }
+            Float(n) => write_scaled!(f, n),
             Complex(n) => write_scaled!(f, n),
         }
     }
@@ -623,9 +617,7 @@ impl std::fmt::Debug for Number {
             Integer(n) => write!(f, "{}", n),
             Rational(n) => write!(f, "{}", n),
             Float(n) => {
-                if n.is_nan() {
-                    write!(f, "nan")
-                } else if n.is_infinite() {
+                if n.is_nan() || n.is_infinite() {
                     write!(f, "{}", n)
                 } else {
                     let (mantissa, exponent, sign) = n.integer_decode();
