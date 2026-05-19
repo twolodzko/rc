@@ -45,3 +45,8 @@
 	run ./rc -f examples/fibonacci.rc
 	[ "$status" -eq 0 ]
 }
+
+@test "Gaussian" {
+	run ./rc -f examples/gaussian.rc
+	[ "$status" -eq 0 ]
+}

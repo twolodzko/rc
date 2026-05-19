@@ -168,6 +168,8 @@ use test_case::test_case;
 #[test_case("1 ?= 1", "1"; "integers have same types")]
 #[test_case("1/4 ?= 55/19", "55/19"; "rationals have same types")]
 #[test_case("[[[]],[]] ?= []", "[]"; "vectors have same types")]
+#[test_case("1~5||-10~|-21||+|-100|", "101~121"; "absolute value parses correctly")]
+#[test_case("-|5| != |-5|", "5"; "absolute value operation order")]
 fn basic(input: &str, expexted: &str) {
     let (memory, funs) = init();
     let result = eval_string(input, memory, funs).expect("unexpected error");

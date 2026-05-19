@@ -53,7 +53,8 @@ get         =  { ":" }
 term        = _{ (neg ~ !WHITESPACE)? ~ atom ~ fact? }
 fact        =  @{ "!" ~ !"=" }
 neg         =  { "-" }
-atom        = _{ apply | ifelse | name | value | "(" ~ expression ~ ")" }
+atom        = _{ apply | ifelse | name | value | abs | "(" ~ expression ~ ")" }
+abs         =  { "|" ~ expression ~ "|" }
 apply       =  { name ~ "(" ~ (expression ~ ("," ~ expression)*)? ~ ")" }
 function    =  { "fun" ~ name ~ "(" ~ (name ~ ("," ~ name)*)? ~ ")" ~ (expression | body) }
 body        =  { "{" ~ (expression ~ ";"?)+ ~ "}" }

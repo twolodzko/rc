@@ -147,6 +147,11 @@ fn parse_expr(pairs: Pairs<Rule>) -> Result<Expr> {
                 }
                 Ok(Expr::Primitive(method, Box::new(args[0].clone())))
             }
+            Rule::abs => {
+                let inner = primary.into_inner();
+                let expr = parse_expr(inner)?;
+                Ok(Expr::Primitive(Method::Abs, Box::new(expr)))
+            }
             Rule::expression => parse_expr(primary.into_inner()),
             Rule::term => parse_expr(primary.into_inner()),
             Rule::name => {

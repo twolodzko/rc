@@ -69,7 +69,7 @@ the right-hand side value is returned, otherwise an assertion error is thrown.
 `?=` operator checks if two values have the same type (vector, integer, etc) regardless
 of value.
 
-`abs`, `floor`, `ceil` primitives can operate on numbers of any type.
+`abs` (or just `|x|`), `floor`, `ceil` primitives can operate on numbers of any type.
 The  `sqrt`, `cbrt`, `ln` (or `log`), `log2`, `log10`, `exp` will
 cast numbers to floats, but have also complex number variants.
 `erf`, `erfc`, `gamma`, `lgamma` are implemented only for floats and not for complex numbers.
