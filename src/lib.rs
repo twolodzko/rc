@@ -30,27 +30,7 @@ pub type Memory = Rc<RefCell<HashMap<String, Algebra>>>;
 pub type Functions = Rc<RefCell<HashMap<String, Function>>>;
 
 pub fn init() -> (Memory, Functions) {
-    use number::Number::*;
     let memory: Memory = Default::default();
-    {
-        let mut m = memory.borrow_mut();
-        m.insert(
-            "e".to_string(),
-            Algebra::Scalar(Float(std::f64::consts::E.into())),
-        );
-        m.insert(
-            "pi".to_string(),
-            Algebra::Scalar(Float(std::f64::consts::PI.into())),
-        );
-        m.insert(
-            "epsilon".to_string(),
-            Algebra::Scalar(Float(f64::EPSILON.into())),
-        );
-        m.insert(
-            "i".to_string(),
-            Algebra::Scalar(Complex(num::complex::Complex::I)),
-        );
-    }
     let funs: Functions = Default::default();
     (memory, funs)
 }

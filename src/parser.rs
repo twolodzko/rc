@@ -156,6 +156,12 @@ fn parse_expr(pairs: Pairs<Rule>) -> Result<Expr> {
             Rule::term => parse_expr(primary.into_inner()),
             Rule::name => {
                 let expr = match primary.as_str().to_lowercase().as_str() {
+                    "pi" => {
+                        Expr::Value(Algebra::Scalar(Number::Float(std::f64::consts::PI.into())))
+                    }
+                    "e" => Expr::Value(Algebra::Scalar(Number::Float(std::f64::consts::E.into()))),
+                    "i" => Expr::Value(Algebra::Scalar(Number::Complex(num::complex::Complex::I))),
+                    "epsilon" => Expr::Value(Algebra::Scalar(Number::Float(f64::EPSILON.into()))),
                     "nan" => Expr::Value(Algebra::Scalar(Number::NAN)),
                     "inf" => Expr::Value(Algebra::Scalar(Number::INFINITY)),
                     _ => Expr::Variable(primary.to_string()),
