@@ -438,9 +438,19 @@ impl Function {
             return Ok((self.body[0].clone(), local.clone()));
         }
         let last = self.body.len() - 1;
-        eval_all(&self.body[..last], local.clone(), funs)?;
+        eval_keep_state(&self.body[..last], local.clone(), funs)?;
         Ok((self.body[last].clone(), local))
     }
+}
+
+/// Evaluate the expressions, save result of each expression saved to the `_` variable
+pub fn eval_keep_state(exprs: &[Expr], memory: Memory, funs: Functions) -> Result<Algebra> {
+    let mut last = Algebra::NAN;
+    for expr in exprs {
+        last = eval(expr, memory.clone(), funs.clone())?;
+        memory.borrow_mut().insert("_".to_string(), last.clone());
+    }
+    Ok(last)
 }
 
 fn eval_all(exprs: &[Expr], memory: Memory, funs: Functions) -> Result<Vec<Algebra>> {

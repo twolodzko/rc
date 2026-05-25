@@ -1,0 +1,16 @@
+# _ can be used instead of pipe (|, ., |>, %>%, etc in some languages),
+# for example, this ugly R code:
+#
+#   2 %>%
+#     `+`(., 2) %>%
+#     `^`(., 3) %>%
+#     `/`(., 4) %>%
+#     sqrt(.)
+#
+# becomes:
+
+2
+_ + 2
+_ ^ 3
+_ / 4
+sqrt(_)

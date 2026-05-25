@@ -62,3 +62,9 @@
 	run ./rc -f examples/gaussian.rc
 	[ "$status" -eq 0 ]
 }
+
+@test "Pipe operator replacement" {
+	run ./rc -f examples/pipe.rc
+	[ "${lines[0]}" = "4" ]
+	[ "$status" -eq 0 ]
+}

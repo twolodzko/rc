@@ -13,11 +13,11 @@ mod parser;
 mod tests;
 mod vector;
 
-pub(crate) use algebra::Algebra;
+use algebra::Algebra;
 pub use eval::eval;
-pub use parser::parse;
+use parser::parse;
 
-use crate::expr::Expr;
+use crate::{eval::eval_keep_state, expr::Expr};
 use anyhow::Result;
 use expr::Function;
 use std::{cell::RefCell, collections::HashMap, fs::File, io::Read, path::PathBuf, rc::Rc};
@@ -51,18 +51,9 @@ pub fn init() -> (Memory, Functions) {
     (memory, funs)
 }
 
-fn eval_main(exprs: &[Expr], memory: Memory, funs: Functions) -> Result<Algebra> {
-    let mut last = Algebra::NAN;
-    for expr in exprs {
-        last = eval(expr, memory.clone(), funs.clone())?;
-        memory.borrow_mut().insert("_".to_string(), last.clone());
-    }
-    Ok(last)
-}
-
 pub fn eval_string(script: &str, memory: Memory, funs: Functions) -> Result<Algebra> {
     let exprs = parse(script)?;
-    eval_main(&exprs, memory.clone(), funs)
+    eval_keep_state(&exprs, memory.clone(), funs)
 }
 
 pub fn eval_file(path: &PathBuf, memory: Memory, funs: Functions) -> Result<Algebra> {
