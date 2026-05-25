@@ -46,6 +46,8 @@ Type conversions: <s>int</s> (convert to integer), <s>float</s> (convert to floa
 
 <s>dbg</s> would print a debug log for given expression.
 
+<s>print(2 + 2 = {2+2})</s> would print "2 + 2 = 4" interpreting arguments (including whitespaces) as a string and the content of {} as an expression that is evaluated. Special characters can be escaped, for example \n is a newline, or \{ and \} are escaped curly brackets.
+
 <s><u>Custom functions</u></s>
 
 Functions can be defined using the syntax shown below:
@@ -83,6 +85,10 @@ struct Args {
     #[arg(long, env = "RC_PRINT_AS_FLOAT")]
     print_as_float: bool,
 
+    /// Don't print the result except when explicitly using print() or dbg()
+    #[arg(long, env = "RC_QUIET")]
+    quiet: bool,
+
     #[command(flatten)]
     script: Option<Script>,
 }
@@ -110,12 +116,20 @@ fn main() {
     if let Some(script) = args.script {
         if let Some(ref path) = script.path {
             match eval_file(path, memory, funs) {
-                Ok(val) => println!("{}", val),
+                Ok(val) => {
+                    if !args.quiet {
+                        println!("{}", val)
+                    }
+                }
                 Err(err) => error!(err),
             }
         } else if let Some(ref script) = script.script {
             match eval_string(script, memory, funs) {
-                Ok(val) => println!("{}", val),
+                Ok(val) => {
+                    if !args.quiet {
+                        println!("{}", val)
+                    }
+                }
                 Err(err) => error!(err),
             }
         }

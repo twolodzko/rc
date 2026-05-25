@@ -1,4 +1,4 @@
-use crate::algebra::Algebra;
+use crate::{Template, algebra::Algebra};
 use std::path::PathBuf;
 
 #[derive(Clone)]
@@ -16,6 +16,7 @@ pub enum Expr {
     Apply(String, Vec<Expr>),
     IfElse(Box<Expr>, Box<Expr>, Box<Expr>),
     Load(PathBuf),
+    Print(Vec<Template>),
 }
 
 #[derive(Debug, Clone)]
@@ -129,6 +130,15 @@ impl std::fmt::Display for Expr {
             ),
             IfElse(cond, yes, no) => write!(f, "if {} then {} else {}", cond, yes, no),
             Load(path) => write!(f, "load({})", path.to_str().unwrap_or_default()),
+            Print(template) => write!(
+                f,
+                "print({})",
+                template
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<String>>()
+                    .join(",")
+            ),
         }
     }
 }

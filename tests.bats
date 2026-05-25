@@ -31,6 +31,18 @@
 	[ "$status" -eq 0 ]
 }
 
+@test "Quiet flag and print result of last line" {
+	run ./rc --quiet '2+2; print({_})'
+	[ "${lines[0]}" = "4" ]
+	[ "$status" -eq 0 ]
+}
+
+@test "Print formatting uses correct spaces" {
+	run ./rc --quiet 'print(  {4/2}+2 = \{\| {2+2} \|\} )'
+	[ "${lines[0]}" = "  2+2 = {| 4 |} " ]
+	[ "$status" -eq 0 ]
+}
+
 @test "Binomial coefficient" {
 	run ./rc -f examples/binomial.rc
 	[ "$status" -eq 0 ]

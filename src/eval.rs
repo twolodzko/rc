@@ -1,5 +1,5 @@
 use crate::{
-    Algebra, ArityError, AssertionError, Functions, Memory, eval_file,
+    Algebra, ArityError, AssertionError, Functions, Memory, Template, eval_file,
     expr::{Expr, Function, Op},
     interval::Interval,
     number::Number,
@@ -401,6 +401,19 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                 funs.borrow_mut()
                     .insert(func.name.to_string(), func.clone());
                 return Ok(Algebra::NAN);
+            }
+            Print(ref template) => {
+                let mut last = Algebra::NAN;
+                for t in template {
+                    match t {
+                        Template::String(s) => print!("{}", s),
+                        Template::Field(e) => {
+                            last = eval(e, memory.clone(), funs.clone())?;
+                            print!("{}", last)
+                        }
+                    }
+                }
+                return Ok(last);
             }
             Load(ref path) => return eval_file(path, memory, funs),
         }

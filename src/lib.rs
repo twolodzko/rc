@@ -26,6 +26,22 @@ use std::{cell::RefCell, collections::HashMap, fs::File, io::Read, path::PathBuf
 pub static mut SCALE: Option<usize> = None;
 pub static mut PRINT_AS_FLOAT: bool = false;
 
+#[derive(Debug, Clone)]
+pub enum Template {
+    Field(Expr),
+    String(String),
+}
+
+impl std::fmt::Display for Template {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use Template::*;
+        match self {
+            Field(e) => write!(f, "{{{}}}", e),
+            String(s) => write!(f, "{}", s),
+        }
+    }
+}
+
 pub type Memory = Rc<RefCell<HashMap<String, Algebra>>>;
 pub type Functions = Rc<RefCell<HashMap<String, Function>>>;
 

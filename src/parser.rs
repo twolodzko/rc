@@ -1,5 +1,5 @@
 use crate::{
-    Algebra, ArityError,
+    Algebra, ArityError, Template,
     expr::{Expr, Function, Method, Op},
     number::Number,
 };
@@ -209,6 +209,29 @@ fn parse_expr(pairs: Pairs<Rule>) -> Result<Expr> {
                 let no = parse_expr(inner.next().unwrap().into_inner())?;
                 Ok(Expr::IfElse(Box::new(cond), Box::new(yes), Box::new(no)))
             }
+            Rule::template => {
+                let inner = primary.into_inner();
+                let mut acc = Vec::new();
+                for val in inner {
+                    let val = match val.as_rule() {
+                        Rule::field => {
+                            let pairs = val.into_inner();
+                            let expr = parse_expr(pairs)?;
+                            Template::Field(expr)
+                        }
+                        Rule::string => Template::String(val.to_string()),
+                        Rule::escaped => {
+                            let Some(s) = unescape(val.as_str()) else {
+                                bail!("invalid escape sequence: {}", val.as_str())
+                            };
+                            Template::String(s.to_string())
+                        }
+                        _ => bail!("unexpected {}", val),
+                    };
+                    acc.push(val);
+                }
+                Ok(Expr::Print(acc))
+            }
             rule => bail!("unexpected {:?}", rule),
         })
         .map_infix(|lhs, op, rhs| {
@@ -267,4 +290,51 @@ fn parse_imag(pair: Pair<Rule>) -> Result<f64> {
         return Ok(1f64);
     }
     Ok(f64::from_str(&s)?)
+}
+
+fn unescape(s: &str) -> Option<char> {
+    let mut chars = s.chars();
+    let Some('\\') = chars.next() else {
+        return None;
+    };
+    let c = match chars.next().unwrap() {
+        'n' => '\n',
+        'r' => '\r',
+        't' => '\t',
+        '0' => '\0',
+        'b' => '\u{000C}',
+        // \xNN
+        'x' => {
+            let mut s = String::new();
+            for _ in 0..2 {
+                if let Some(c) = chars.next() {
+                    s.push(c);
+                } else {
+                    return None;
+                };
+            }
+            let Ok(u) = u32::from_str_radix(&s, 16) else {
+                return None;
+            };
+            return char::from_u32(u);
+        }
+        // \uNNNN
+        'u' => {
+            let mut s = String::new();
+            for _ in 0..4 {
+                if let Some(c) = chars.next() {
+                    s.push(c);
+                } else {
+                    return None;
+                };
+            }
+            let Ok(u) = u32::from_str_radix(&s, 16) else {
+                return None;
+            };
+            return char::from_u32(u);
+        }
+        // in particular: \'"
+        c => c,
+    };
+    Some(c)
 }
