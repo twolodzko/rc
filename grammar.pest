@@ -60,13 +60,13 @@ function    =  { "fun" ~ name ~ "(" ~ (name ~ ("," ~ name)*)? ~ ")" ~ (expressio
 body        =  { "{" ~ (expression ~ ";"?)+ ~ "}" }
 ifelse      =  { "if" ~ expression ~ "then" ~ expression ~ "else" ~ expression }
 
-print_fn = _{ "print" ~  template }
+print_fn = _{ "print" ~ template }
 template = ${ "(" ~ (string | escaped | field)* ~ ")" }
 string   = @{ (!(")" | "{" | "\\") ~ ANY)+ }
 escaped  = @{
     "\\" ~ (("u" ~ ASCII_ALPHANUMERIC{4}) | ("x" ~ ASCII_ALPHANUMERIC{2}) | ANY)
 }
-field    =  ${ "{" ~ expression ~ "}" }
+field    = ${ "{" ~ expression ~ "}" }
 
 program =  { SOI ~ (line ~ ";"?)* ~ EOI }
 line    = _{ load | function | expression }
