@@ -171,6 +171,7 @@ use test_case::test_case;
 #[test_case("1~5||-10~|-21||+|-100|", "101~121"; "absolute value parses correctly")]
 #[test_case("-|5| != |-5|", "5"; "absolute value operation order")]
 #[test_case("fun f(x) { x+2; _^2 }; f(2)", "16"; "using last value placeholder in functions")]
+#[test_case("{ x=1; y=x+2; y^2 } / 5", "9/5"; "simple block")]
 fn basic(input: &str, expexted: &str) {
     let (memory, funs) = init();
     let result = eval_string(input, memory, funs).expect("unexpected error");

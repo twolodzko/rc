@@ -12,6 +12,7 @@ pub enum Expr {
         op: Op,
         rhs: Box<Expr>,
     },
+    Block(Vec<Expr>),
     Function(Function),
     Apply(String, Vec<Expr>),
     IfElse(Box<Expr>, Box<Expr>, Box<Expr>),
@@ -106,6 +107,14 @@ impl std::fmt::Display for Expr {
                 }
             }
             BinaryOp { lhs, op, rhs } => write!(f, "{} {} {}", lhs, op, rhs),
+            Block(exprs) => {
+                let block = exprs
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                write!(f, "{{\n{}\n}}", block)
+            }
             Function(self::Function { name, args, body }) => {
                 let args = args
                     .iter()
@@ -114,7 +123,7 @@ impl std::fmt::Display for Expr {
                     .join(", ");
                 let body = body
                     .iter()
-                    .map(|e| format!("\t{}", e))
+                    .map(ToString::to_string)
                     .collect::<Vec<_>>()
                     .join("\n");
                 write!(f, "fun {}({}) {{\n{}\n}}", name, args, body)

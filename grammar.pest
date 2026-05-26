@@ -53,11 +53,11 @@ get         =  { ":" }
 term        = _{ (neg ~ !WHITESPACE)? ~ atom ~ fact? }
 fact        = @{ "!" ~ !"=" }
 neg         =  { "-" }
-atom        = _{ print_fn | apply | ifelse | name | value | abs | "(" ~ expression ~ ")" }
+atom        = _{ print_fn | apply | ifelse | name | value | abs | block | "(" ~ expression ~ ")" }
 abs         =  { "|" ~ expression ~ "|" }
 apply       =  { name ~ "(" ~ (expression ~ ("," ~ expression)*)? ~ ")" }
-function    =  { "fun" ~ name ~ "(" ~ (name ~ ("," ~ name)*)? ~ ")" ~ (expression | body) }
-body        =  { "{" ~ (expression ~ ";"?)+ ~ "}" }
+function    =  { "fun" ~ name ~ "(" ~ (name ~ ("," ~ name)*)? ~ ")" ~ expression }
+block       =  { "{" ~ (expression ~ ";"?)+ ~ "}" }
 ifelse      =  { "if" ~ expression ~ "then" ~ expression ~ "else" ~ expression }
 
 print_fn = _{ "print" ~ template }

@@ -75,18 +75,13 @@ fn parse_fun(pair: Pair<Rule>) -> Result<Expr> {
         args.push(arg);
     }
 
-    let mut body = Vec::new();
-    let next = inner.next().unwrap();
-    if matches!(next.as_rule(), Rule::expression) {
-        let expr = parse_expr(next.into_inner())?;
-        body.push(expr);
+    let inner = inner.next().unwrap().into_inner();
+    let expr = parse_expr(inner)?;
+    let body = if let Expr::Block(block) = expr {
+        block
     } else {
-        for expr in next.into_inner() {
-            let expr = parse_expr(expr.into_inner())?;
-            body.push(expr);
-        }
-    }
-
+        vec![expr]
+    };
     Ok(Expr::Function(Function { name, args, body }))
 }
 
@@ -147,6 +142,19 @@ fn parse_expr(pairs: Pairs<Rule>) -> Result<Expr> {
                 }
                 Ok(Expr::Primitive(method, Box::new(args[0].clone())))
             }
+            Rule::block => {
+                let mut acc = Vec::new();
+                let inner = primary.into_inner();
+                for pair in inner {
+                    let expr = parse_expr(pair.into_inner())?;
+                    acc.push(expr);
+                }
+                if acc.len() == 1 {
+                    Ok(acc.pop().unwrap())
+                } else {
+                    Ok(Expr::Block(acc))
+                }
+            }
             Rule::abs => {
                 let inner = primary.into_inner();
                 let expr = parse_expr(inner)?;
@@ -195,12 +203,12 @@ fn parse_expr(pairs: Pairs<Rule>) -> Result<Expr> {
             }
             Rule::vector => {
                 let inner = primary.into_inner();
-                let mut exprs = Vec::new();
+                let mut acc = Vec::new();
                 for pair in inner {
                     let expr = parse_expr(pair.into_inner())?;
-                    exprs.push(expr);
+                    acc.push(expr);
                 }
-                Ok(Expr::NewVec(exprs))
+                Ok(Expr::NewVec(acc))
             }
             Rule::ifelse => {
                 let mut inner = primary.into_inner();

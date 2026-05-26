@@ -383,6 +383,11 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                 return Ok(last);
             }
             // tail-call optimized
+            Block(ref exprs) => {
+                let last = exprs.len() - 1;
+                eval_all(&exprs[..last], memory.clone(), funs.clone())?;
+                expr = exprs[last].clone();
+            }
             Apply(ref name, ref exprs) => {
                 let Some(func) = funs.borrow().get(name).cloned() else {
                     bail!("unknown function: {}", name)
@@ -435,7 +440,7 @@ impl Function {
         }
         // tail-call optimization
         if self.body.len() == 1 {
-            return Ok((self.body[0].clone(), local.clone()));
+            return Ok((self.body[0].clone(), local));
         }
         let last = self.body.len() - 1;
         eval_keep_state(&self.body[..last], local.clone(), funs)?;
