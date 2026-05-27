@@ -287,7 +287,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                     exprs,
                     memory,
                     funs,
-                    |v| v.0.clone().into_iter().rev().collect::<Vec<_>>().into(),
+                    |v| v.iter().rev().cloned().collect::<Vec<_>>().into(),
                 )?));
             }
             Apply(ref name, ref exprs) if name == "push" => {
@@ -332,6 +332,34 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                 while &this <= &end {
                     acc.push(Algebra::Scalar(this.clone()));
                     this = &this + &step;
+                }
+                return Ok(Algebra::Vector(acc.into()));
+            }
+            Apply(ref name, ref exprs) if name == "map" => {
+                if exprs.len() != 2 {
+                    bail!(ArityError {
+                        name: name.to_string(),
+                        arity: 2,
+                        count: exprs.len()
+                    })
+                }
+                let val = eval(&exprs[0], memory.clone(), funs.clone())?;
+                let Algebra::Vector(vec) = val else {
+                    bail!("{} is not a vector", val)
+                };
+                let Variable(fun_name) = &exprs[1] else {
+                    bail!("{} is not callable", &exprs[1])
+                };
+                let fun = |x: Algebra| {
+                    eval(
+                        &Expr::Apply(fun_name.to_string(), vec![Expr::Value(x)]),
+                        memory.clone(),
+                        funs.clone(),
+                    )
+                };
+                let mut acc = Vec::new();
+                for x in vec.0 {
+                    acc.push(fun(x)?);
                 }
                 return Ok(Algebra::Vector(acc.into()));
             }

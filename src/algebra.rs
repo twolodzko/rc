@@ -110,10 +110,10 @@ impl Algebra {
         use std::iter;
         match (self, other) {
             (x @ Scalar(_), Vector(v)) => {
-                iter::zip(iter::repeat(x), v.0.iter()).all(|(a, b)| a.compare(op, b))
+                iter::zip(iter::repeat(x), v.iter()).all(|(a, b)| a.compare(op, b))
             }
             (Vector(v), x @ Scalar(_)) => {
-                iter::zip(v.0.iter(), iter::repeat(x)).all(|(a, b)| a.compare(op, b))
+                iter::zip(v.iter(), iter::repeat(x)).all(|(a, b)| a.compare(op, b))
             }
             (Vector(a), Vector(b)) if op == Ne => a != b,
             (Vector(a), Vector(b)) => a.zip(b).all(|(a, b)| a.compare(op, b)),
