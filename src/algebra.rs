@@ -17,15 +17,40 @@ pub enum Algebra {
 }
 
 macro_rules! impl_is_method {
-    ($($t:tt)*) => ($(
-        pub fn $t(&self) -> bool {
+    ($($method:tt)*) => ($(
+        pub fn $method(&self) -> bool {
             match self {
-                Scalar(x) => x.$t(),
-                Interval(x) => x.$t(),
-                Vector(x) => x.$t(),
+                Scalar(x) => x.$method(),
+                Interval(x) => x.$method(),
+                Vector(x) => {
+                    if x.is_empty() {
+                        return false;
+                    }
+                    x.all(|v| v.$method())
+                },
             }
         }
     )*)
+}
+
+macro_rules! apply {
+    ( $lhs:tt, $method:tt, $rhs:tt ) => {{
+        match (&$lhs, &$rhs) {
+            (Scalar(a), Scalar(b)) => Scalar(a.$method(b)),
+            (Scalar(a), Interval(b)) => Interval(interval::Interval::ordered(
+                a.$method(&b.lower),
+                a.$method(&b.upper),
+            )),
+            (Interval(a), Scalar(b)) => Interval(interval::Interval::ordered(
+                a.lower.$method(b),
+                a.upper.$method(b),
+            )),
+            (Vector(a), Vector(b)) => Vector(a.zip_map(b, |(x, y)| x.$method(y))),
+            (Interval(a), Interval(b)) => Interval(a.$method(b)),
+            (_, Vector(b)) => Vector(b.map(|x| $lhs.$method(x))),
+            (Vector(a), _) => Vector(a.map(|x| x.$method($rhs))),
+        }
+    }};
 }
 
 impl Algebra {
@@ -39,6 +64,7 @@ impl Algebra {
             Op::Sub => self - rhs,
             Op::Mul => self * rhs,
             Op::Div => self / rhs,
+            Op::Idiv => self.idiv(rhs),
             Op::Rem => self % rhs,
             Op::Pow => self.pow(rhs),
             Op::BitOr => match (self, rhs) {
@@ -112,25 +138,12 @@ impl Algebra {
         Ok(val)
     }
 
-    pub fn choose(&self, other: &Algebra) -> Algebra {
-        match (self, other) {
-            (Scalar(a), Scalar(b)) => Scalar(a.choose(b)),
-            (Scalar(a), Interval(b)) => Interval(interval::Interval::ordered(
-                a.choose(&b.lower),
-                a.choose(&b.upper),
-            )),
-            (Interval(a), Scalar(b)) => Interval(interval::Interval::ordered(
-                a.lower.choose(b),
-                a.upper.choose(b),
-            )),
-            (Interval(a), Interval(b)) => Interval(a.choose(b)),
-            (Vector(a), Vector(b)) => Vector(a.zip_map(b, |(n, k)| n.choose(k))),
-            (a, Vector(b)) => Vector(b.map(|x| a.choose(x))),
-            (Vector(a), b) => Vector(a.map(|x| x.choose(b))),
-        }
-    }
-
     pub fn equal_type(&self, other: &Algebra) -> bool {
+        if self.is_nan() {
+            return other.is_nan();
+        } else if other.is_nan() {
+            return false;
+        }
         use number::Number::*;
         matches!(
             (self, other),
@@ -153,20 +166,14 @@ impl Algebra {
             Vector(v) => Vector(v.map(|x| x.map(fun))),
         }
     }
-}
 
-macro_rules! op {
-    ( $lhs:tt $op:tt $rhs:tt ) => {{
-        match (&$lhs, &$rhs) {
-            (Scalar(a), Scalar(b)) => Scalar(a $op b),
-            (Scalar(a), Interval(b)) => Interval(interval::Interval::ordered(a $op &b.lower, a $op &b.upper)),
-            (Interval(a), Scalar(b)) => Interval(interval::Interval::ordered(&a.lower $op b, &a.upper $op b)),
-            (Vector(a), Vector(b)) => Vector(a $op b),
-            (Interval(a), Interval(b)) => Interval(a $op b),
-            (_, Vector(b)) => Vector(b.map(|x| $lhs $op x)),
-            (Vector(a), _) => Vector(a.map(|x| x $op $rhs)),
-        }
-    }}
+    pub fn choose(&self, other: &Algebra) -> Algebra {
+        apply!(self, choose, other)
+    }
+
+    pub fn idiv(&self, other: &Algebra) -> Algebra {
+        apply!(self, idiv, other)
+    }
 }
 
 impl Add for &Algebra {
@@ -179,7 +186,7 @@ impl Add for &Algebra {
         if rhs.is_zero() {
             return self.clone();
         }
-        op!(self + rhs)
+        apply!(self, add, rhs)
     }
 }
 
@@ -193,7 +200,7 @@ impl Sub for &Algebra {
         if rhs.is_zero() {
             return self.clone();
         }
-        op!(self - rhs)
+        apply!(self, sub, rhs)
     }
 }
 
@@ -207,7 +214,7 @@ impl Mul for &Algebra {
         if rhs.is_one() {
             return self.clone();
         }
-        op!(self * rhs)
+        apply!(self, mul, rhs)
     }
 }
 
@@ -218,7 +225,7 @@ impl Div for &Algebra {
         if rhs.is_one() {
             return self.clone();
         }
-        op!(self / rhs)
+        apply!(self, div, rhs)
     }
 }
 
@@ -226,7 +233,7 @@ impl Rem for &Algebra {
     type Output = Algebra;
 
     fn rem(self, rhs: Self) -> Self::Output {
-        op!(self % rhs)
+        apply!(self, rem, rhs)
     }
 }
 
@@ -237,20 +244,7 @@ impl Pow<&Algebra> for &Algebra {
         if rhs.is_one() {
             return self.clone();
         }
-        match (&self, &rhs) {
-            (Scalar(a), Scalar(b)) => Scalar(a.pow(b)),
-            (Scalar(a), Interval(b)) => Interval(interval::Interval::ordered(
-                a.pow(&b.lower),
-                a.pow(&b.upper),
-            )),
-            (Interval(a), Scalar(b)) => {
-                Interval(interval::Interval::ordered(a.lower.pow(b), a.upper.pow(b)))
-            }
-            (Interval(a), Interval(b)) => Interval(a.pow(b)),
-            (Vector(a), Vector(b)) => Vector(a.zip_map(b, |(n, k)| n.pow(k))),
-            (_, Vector(b)) => Vector(b.map(|x| self.pow(x))),
-            (Vector(a), _) => Vector(a.map(|x| x.pow(rhs))),
-        }
+        apply!(self, pow, rhs)
     }
 }
 
@@ -261,7 +255,7 @@ impl Neg for &Algebra {
         match self {
             Scalar(x) => Scalar(-x),
             Interval(x) => Interval(-x),
-            Vector(x) => Vector(-x),
+            Vector(x) => Vector(x.map(|v| -v)),
         }
     }
 }

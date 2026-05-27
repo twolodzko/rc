@@ -31,9 +31,10 @@ static PRATT_PARSER: LazyLock<PrattParser<Rule>> = LazyLock::new(|| {
         .op(Op::infix(get, Left)) // :
         .op(Op::infix(add, Left) | Op::infix(sub, Left)) // + -
         .op(Op::infix(mul, Left)
+            | Op::infix(idiv, Left)
             | Op::infix(div, Left)
             | Op::infix(rem, Left)
-            | Op::infix(at, Left)) // * / % @
+            | Op::infix(at, Left)) // * // / % @
         .op(Op::infix(pow, Right)) // ^
         .op(Op::infix(bit_or, Left)) // |
         .op(Op::infix(bit_and, Left)) // &
@@ -253,6 +254,7 @@ fn parse_expr(pairs: Pairs<Rule>) -> Result<Expr> {
                 Rule::ge => Op::Ge,
                 Rule::get => Op::Get,
                 Rule::gt => Op::Gt,
+                Rule::idiv => Op::Idiv,
                 Rule::interval => Op::Interval,
                 Rule::is_in => Op::In,
                 Rule::le => Op::Le,

@@ -68,3 +68,8 @@
 	[ "${lines[0]}" = "4" ]
 	[ "$status" -eq 0 ]
 }
+
+@test "Implementing isqrt using custom map function" {
+	run ./rc -f examples/isqrt_map.rc
+	[ "$status" -eq 0 ]
+}

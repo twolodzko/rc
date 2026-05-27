@@ -1,25 +1,11 @@
 use crate::{Algebra, expr::Method, number::Number};
 use anyhow::Result;
-use num::{BigInt, One, traits::Pow};
-use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
-
-macro_rules! impl_is_method {
-    ($($t:tt)*) => ($(
-        pub fn $t(&self) -> bool {
-            if self.0.is_empty() {
-                return false;
-            }
-            self.0.iter().all(|x| x.$t())
-        }
-    )*)
-}
+use num::{BigInt, One};
 
 #[derive(Clone, Default, PartialEq, Eq)]
 pub struct Vector(pub Vec<Algebra>);
 
 impl Vector {
-    impl_is_method!(is_zero is_one is_negative is_nan is_infinite);
-
     pub fn primitive(&self, method: Method) -> Result<Vector> {
         let vals = self
             .0
@@ -53,6 +39,10 @@ impl Vector {
             Box::new(rhs.0.iter())
         };
         std::iter::zip(lhs, rhs)
+    }
+
+    pub fn all(&self, fun: impl Fn(&Algebra) -> bool) -> bool {
+        self.0.iter().all(fun)
     }
 
     pub fn dot(&self, rhs: &Vector) -> Algebra {
@@ -98,40 +88,6 @@ impl Vector {
 
     pub fn len(&self) -> usize {
         self.0.len()
-    }
-}
-
-macro_rules! impl_op {
-    ( $trait:ident, $method:ident ) => {
-        impl $trait for &Vector {
-            type Output = Vector;
-
-            fn $method(self, rhs: Self) -> Self::Output {
-                self.zip_map(rhs, |(a, b)| a.$method(b))
-            }
-        }
-    };
-}
-
-impl_op!(Add, add);
-impl_op!(Sub, sub);
-impl_op!(Mul, mul);
-impl_op!(Div, div);
-impl_op!(Rem, rem);
-
-impl Pow<&Vector> for &Vector {
-    type Output = Vector;
-
-    fn pow(self, rhs: &Vector) -> Self::Output {
-        self.zip_map(rhs, |(a, b)| a.pow(b))
-    }
-}
-
-impl Neg for &Vector {
-    type Output = Vector;
-
-    fn neg(self) -> Self::Output {
-        self.map(|x| -x)
     }
 }
 

@@ -142,6 +142,35 @@ impl Interval {
             fun(&self.upper, &other.upper),
         ]
     }
+
+    pub fn idiv(&self, rhs: &Interval) -> Interval {
+        if self.is_infinite() || rhs.is_infinite() {
+            return Interval::INFINITY;
+        }
+        if self.is_nan() || rhs.is_nan() {
+            return Interval::NAN;
+        }
+        if self.is_zero() {
+            return Interval::ZERO;
+        }
+        if rhs.is_zero() {
+            return Interval::NAN;
+        }
+        if self.is_singular() {
+            let a = self.lower.idiv(&rhs.lower);
+            let b = self.lower.idiv(&rhs.upper);
+            return Interval::ordered(a, b);
+        } else if rhs.is_singular() {
+            let a = self.lower.idiv(&rhs.lower);
+            let b = self.upper.idiv(&rhs.lower);
+            return Interval::ordered(a, b);
+        }
+        let pairs = self.cartesian(rhs, |a, b| a.idiv(b));
+        Interval {
+            lower: pairs.iter().min().unwrap().clone(),
+            upper: pairs.iter().max().unwrap().clone(),
+        }
+    }
 }
 
 impl Add for &Interval {

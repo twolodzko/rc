@@ -216,6 +216,35 @@ impl Number {
         }
     }
 
+    fn trunc(&self) -> Number {
+        match self {
+            Integer(_) => self.clone(),
+            Rational(x) => Integer(x.trunc().to_integer()),
+            Float(x) => {
+                let Some(i) = x.trunc().to_bigint() else {
+                    return Number::NAN;
+                };
+                Integer(i)
+            }
+            Complex(x) => {
+                let Some(i) = x.to_f64().unwrap_or(f64::NAN).trunc().to_bigint() else {
+                    return Number::NAN;
+                };
+                Integer(i)
+            }
+        }
+    }
+
+    pub fn idiv(&self, rhs: &Number) -> Number {
+        if rhs.is_zero() {
+            return Number::NAN;
+        }
+        match (self, rhs) {
+            (Integer(a), Integer(b)) => Integer(a / b),
+            _ => (self / rhs).trunc(),
+        }
+    }
+
     pub fn factorial(&self) -> Number {
         let Integer(n) = self.cast_to_integer() else {
             return Number::NAN;

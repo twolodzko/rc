@@ -63,11 +63,11 @@ bounds, e.g. `-5~3 | 0~7 = -5~7`. `&` operator computes intersection of interval
 ## Primitives
 
 The following arithmetic operators are available: `+`, `-`, `*`, `/`, `%` (reminder),
-and `^` (exponentiation). Additionally, the comparison operators are `=` (or `==`), `!=`,
-`<`, `<=`, `>`, and `>=`. When the comparison is positive (e.g. `2 < 3`),
-the right-hand side value is returned, otherwise an assertion error is thrown.
-`?=` operator checks if two values have the same type (vector, integer, etc) regardless
-of value.
+`^` (exponentiation), and `//` (integer division). Additionally, the comparison
+operators are `=` (or `==`), `!=`, `<`, `<=`, `>`, and `>=`. When the comparison
+is positive (e.g. `2 < 3`), the right-hand side value is returned, otherwise an
+assertion error is thrown. `?=` operator checks if two values have the same type
+(vector, integer, etc) regardless of value.
 
 `abs` (or just `|x|`), `floor`, `ceil` primitives can operate on numbers of any type.
 The  `sqrt`, `cbrt`, `ln` (or `log`), `log2`, `log10`, `exp` will

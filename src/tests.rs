@@ -7,6 +7,10 @@ use test_case::test_case;
 #[test_case("10/20", "1/2"; "division of integers")]
 #[test_case("1/(2/3)", "3/2"; "reciprocal of integers")]
 #[test_case("1/0.5", "2"; "reciprocal of float")]
+#[test_case("5 // 2", "2"; "integer division is below regular division")]
+#[test_case("5 // 3", "1"; "integer division is above regular division")]
+#[test_case("5.0 // 2.0", "2"; "integer division works for floats")]
+#[test_case("(50/10) // (30/10)", "1"; "integer division works for rationals")]
 #[test_case("(10/10)/0.5", "2"; "division by float")]
 #[test_case("sqrt(9) = 9^(1/2)", "3"; "sqrt")]
 #[test_case("4^(3/2)", "8"; "rational power")]
@@ -172,6 +176,10 @@ use test_case::test_case;
 #[test_case("-|5| != |-5|", "5"; "absolute value operation order")]
 #[test_case("fun f(x) { x+2; _^2 }; f(2)", "16"; "using last value placeholder in functions")]
 #[test_case("{ x=1; y=x+2; y^2 } / 5", "9/5"; "simple block")]
+#[test_case("isvec([])", "[]"; "isvec for empty vector")]
+#[test_case("isvec([1,2,3])", "[1, 2, 3]"; "isvec for non-empty vector")]
+#[test_case("isvec([[1,[2+5],3^2],[]])", "[[1, [7], 9], []]"; "isvec for nested vector")]
+
 fn basic(input: &str, expexted: &str) {
     let (memory, funs) = init();
     let result = eval_string(input, memory, funs).expect("unexpected error");
@@ -210,6 +218,8 @@ fn basic(input: &str, expexted: &str) {
 #[test_case("[] ?= 11~22"; "list and interval have different types")]
 #[test_case("1 ?= 5.0"; "integer and float have different types")]
 #[test_case("1/2 ?= 0.5"; "rational and float have different types")]
+#[test_case("isvec(42)"; "isvec for a number")]
+#[test_case("isvec(1~2)"; "isvec for an interval")]
 fn expect_error(input: &str) {
     let (memory, funs) = init();
     assert!(eval_string(input, memory, funs).is_err())

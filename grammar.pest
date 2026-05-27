@@ -10,6 +10,7 @@ operator    = _{
     add
   | sub
   | mul
+  | idiv
   | div
   | rem
   | pow
@@ -32,6 +33,7 @@ operator    = _{
 add         =  { "+" }
 sub         =  { "-" }
 mul         =  { "*" }
+idiv        =  { "//" }
 div         =  { "/" }
 rem         =  { "%" }
 pow         =  { "^" }

@@ -20,7 +20,7 @@ Calculator supporting arbitrary precision integers, rational, and complex number
 
 <s><u>Operators:</u></s>
 
-Arithmetic: <s>+</s>, <s>-</s>, <s>*</s>, <s>/</s>, <s>%</s> (reminder), <s>^</s> (exponentiation).
+Arithmetic: <s>+</s>, <s>-</s>, <s>*</s>, <s>/</s>, <s>//</s> (integer division), <s>%</s> (reminder), <s>^</s> (exponentiation).
 
 Assertions: <s>=</s>, <s>!=</s>, <s><<</s>, <s><<=</s>, <s>>></s>,<s>>>=</s>, <s>?=</s> (are types equal), <s>in</s> (value is in the vector or interval). If met, they would return the right-hand-side value, otherwise, they will throw an assertion error. The <s>=</s> operator would assign a value to an uninitialized variable, is such variable appears on the either side of the operator.
 
@@ -41,6 +41,8 @@ Some primitives operate on vectors and intervals: <s>min</s> (minimum or a vecto
 <s>seq(start, stop, step)</s> creates a vector of values from ranging from start to stop (inclusive) varying by step. The step is equal to 1 by default.
 
 Type conversions: <s>int</s> (convert to integer), <s>float</s> (convert to float), <s>rat</s> (approximate by a rational number).
+
+<s>isvec</s> asserts if the argument is a vector.
 
 <s>rand(len)</s> creates a vector or random values in the [0, 1) range. Without the len parameter, return a single value.
 

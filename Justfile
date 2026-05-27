@@ -17,3 +17,7 @@ install: test
 
 repl:
     cargo run --
+
+clean:
+    rm -rf ./target
+    rm -rf ./rc
