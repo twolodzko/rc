@@ -1,5 +1,7 @@
 # https://www.johndcook.com/blog/2024/01/01/computing-square-root-floor/
 
+fun isvec(x) x ?= []
+
 fun _step(a, b, n) {
    if b < a then
       _step(b, (b * b + n) // (2 * b), n)

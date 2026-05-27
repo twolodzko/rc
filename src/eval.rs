@@ -368,21 +368,6 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                 let val = eval(&exprs[0], memory, funs)?;
                 return Ok(val.map(|x| x.rat()));
             }
-            Apply(ref name, ref exprs) if name == "isvec" => {
-                if exprs.len() != 1 {
-                    bail!(ArityError {
-                        name: name.to_string(),
-                        arity: 1,
-                        count: exprs.len()
-                    })
-                }
-                let val = eval(&exprs[0], memory, funs)?;
-                if matches!(val, Algebra::Vector(_)) {
-                    return Ok(val);
-                } else {
-                    bail!(AssertionError(expr))
-                }
-            }
             Apply(ref name, ref exprs) if name == "dbg" => {
                 let mut last = Algebra::NAN;
                 for expr in exprs {

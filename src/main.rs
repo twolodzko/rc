@@ -42,8 +42,6 @@ Some primitives operate on vectors and intervals: <s>min</s> (minimum or a vecto
 
 Type conversions: <s>int</s> (convert to integer), <s>float</s> (convert to float), <s>rat</s> (approximate by a rational number).
 
-<s>isvec</s> asserts if the argument is a vector.
-
 <s>rand(len)</s> creates a vector or random values in the [0, 1) range. Without the len parameter, return a single value.
 
 <s>dbg</s> would print a debug log for given expression.
