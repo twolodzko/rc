@@ -137,7 +137,6 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                 op: Op::EqType,
                 ref rhs,
             } => {
-                dbg!(&expr);
                 let lhs = eval(lhs, memory.clone(), funs.clone())?;
                 let rhs = eval(rhs, memory, funs)?;
                 return if lhs.equal_type(&rhs) {
