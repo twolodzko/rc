@@ -286,7 +286,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                     exprs,
                     memory,
                     funs,
-                    |v| v.0.clone().into_iter().rev().collect::<Vec<_>>().into(),
+                    |v| v.0.iter().cloned().rev().collect::<Vec<_>>().into(),
                 )?));
             }
             Apply(ref name, ref exprs) if name == "push" => {

@@ -437,39 +437,38 @@ fn to_rat(f: f64) -> Number {
     let base = Ratio::from_integer(BigInt::from(2));
     Rational(sign * mantissa * base.pow(exponent as i32))
 }
-
 macro_rules! op {
-    ( $lhs:tt $op:tt $rhs:tt ) => {{
+    ( $lhs:tt, $method:tt, $rhs:tt ) => {{
         match (&$lhs, &$rhs) {
-            (Integer(a), Integer(b)) => Integer(a $op b),
-            (Integer(a), Rational(b)) => Rational(Ratio::from_integer(a.clone()) $op b),
-            (Rational(a), Integer(b)) => Rational(a $op b),
-            (Rational(a), Rational(b)) => Rational(a $op b),
-            (Complex(a), Complex(b)) => Complex(a $op b),
-            (Complex(a), _) => Complex(a $op $rhs.to_f64()),
-            (_, Complex(b)) => Complex($lhs.to_f64() $op b),
-            (Float(a), _) => Float(a $op $rhs.to_f64()),
-            (_, Float(b)) => Float(OrderedFloat::from($lhs.to_f64()) $op b),
+            (Integer(a), Integer(b)) => Integer(a.$method(b)),
+            (Integer(a), Rational(b)) => Rational(Ratio::from_integer(a.clone()).$method(b)),
+            (Rational(a), Integer(b)) => Rational(a.$method(b)),
+            (Rational(a), Rational(b)) => Rational(a.$method(b)),
+            (Complex(a), Complex(b)) => Complex(a.$method(b)),
+            (Complex(a), _) => Complex(a.$method($rhs.to_f64())),
+            (_, Complex(b)) => Complex($lhs.to_f64().$method(b)),
+            (Float(a), _) => Float(a.$method($rhs.to_f64())),
+            (_, Float(b)) => Float(OrderedFloat::from($lhs.to_f64()).$method(b)),
         }
     }};
 }
 
 macro_rules! impl_op {
-    ( $trait:ident, $method:ident, $op:tt ) => {
+    ( $trait:ident, $method:ident) => {
         impl $trait for &Number {
             type Output = Number;
 
             fn $method(self, rhs: Self) -> Self::Output {
-                op!(self $op rhs)
+                op!(self, $method, rhs)
             }
         }
     };
 }
 
-impl_op!(Add, add, +);
-impl_op!(Sub, sub, -);
-impl_op!(Mul, mul, *);
-impl_op!(Rem, rem, %);
+impl_op!(Add, add);
+impl_op!(Sub, sub);
+impl_op!(Mul, mul);
+impl_op!(Rem, rem);
 
 impl Div for &Number {
     type Output = Number;
@@ -483,7 +482,7 @@ impl Div for &Number {
         }
         match (self, rhs) {
             (Integer(n), Integer(d)) => Rational(Ratio::new(n.clone(), d.clone())),
-            (a, b) => op!(a / b),
+            (a, b) => op!(a, div, b),
         }
     }
 }

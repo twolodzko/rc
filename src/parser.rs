@@ -343,7 +343,7 @@ fn unescape(s: &str) -> Option<char> {
             };
             return char::from_u32(u);
         }
-        // in particular: \'"
+        // in particular: \' \" \) \{
         c => c,
     };
     Some(c)
