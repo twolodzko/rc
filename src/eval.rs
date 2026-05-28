@@ -505,9 +505,8 @@ fn extract(vector: &vector::Vector, index: &Algebra) -> Result<Algebra> {
                 && let Some(upper) = range.upper.to_usize()
                 && lower >= 1
             {
-                return Ok(Vector(vector::Vector(
-                    vector.0[lower - 1..upper.min(vector.len())].to_vec(),
-                )));
+                let vec = vector.0[lower - 1..upper.min(vector.len())].to_vec();
+                return Ok(Vector(vec.into()));
             }
         }
         Vector(indexes) => {
