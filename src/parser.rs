@@ -166,13 +166,13 @@ fn parse_expr(pairs: Pairs<Rule>) -> Result<Expr> {
             Rule::name => {
                 let expr = match primary.as_str().to_lowercase().as_str() {
                     "pi" => {
-                        Expr::Value(Algebra::Scalar(Number::Float(std::f64::consts::PI.into())))
+                        Expr::Value(Algebra::Number(Number::Float(std::f64::consts::PI.into())))
                     }
-                    "e" => Expr::Value(Algebra::Scalar(Number::Float(std::f64::consts::E.into()))),
-                    "i" => Expr::Value(Algebra::Scalar(Number::Complex(num::complex::Complex::I))),
-                    "epsilon" => Expr::Value(Algebra::Scalar(Number::Float(f64::EPSILON.into()))),
-                    "nan" => Expr::Value(Algebra::Scalar(Number::NAN)),
-                    "inf" => Expr::Value(Algebra::Scalar(Number::INFINITY)),
+                    "e" => Expr::Value(Algebra::Number(Number::Float(std::f64::consts::E.into()))),
+                    "i" => Expr::Value(Algebra::Number(Number::Complex(num::complex::Complex::I))),
+                    "epsilon" => Expr::Value(Algebra::Number(Number::Float(f64::EPSILON.into()))),
+                    "nan" => Expr::Value(Algebra::Number(Number::NAN)),
+                    "inf" => Expr::Value(Algebra::Number(Number::INFINITY)),
                     _ => Expr::Variable(primary.to_string()),
                 };
                 Ok(expr)
@@ -180,11 +180,11 @@ fn parse_expr(pairs: Pairs<Rule>) -> Result<Expr> {
             Rule::float => {
                 let s = primary.as_str();
                 let number = if let Ok(value) = BigInt::from_str(s) {
-                    Expr::Value(Algebra::Scalar(Number::Integer(value)))
+                    Expr::Value(Algebra::Number(Number::Integer(value)))
                 } else if let Ok(value) = f64::from_str(s) {
-                    Expr::Value(Algebra::Scalar(Number::Float(value.into())))
+                    Expr::Value(Algebra::Number(Number::Float(value.into())))
                 } else {
-                    Expr::Value(Algebra::Scalar(Number::NAN))
+                    Expr::Value(Algebra::Number(Number::NAN))
                 };
                 Ok(number)
             }
@@ -198,7 +198,7 @@ fn parse_expr(pairs: Pairs<Rule>) -> Result<Expr> {
                     real = f64::from_str(first.as_str())?;
                     parse_imag(inner.next().unwrap())?
                 };
-                Ok(Expr::Value(Algebra::Scalar(Number::Complex(Complex::new(
+                Ok(Expr::Value(Algebra::Number(Number::Complex(Complex::new(
                     real, imag,
                 )))))
             }

@@ -40,7 +40,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                 let rhs = eval(rhs, memory, funs)?;
                 let ok = match rhs {
                     Algebra::Interval(rhs) => {
-                        let Algebra::Scalar(ref lhs) = lhs else {
+                        let Algebra::Number(ref lhs) = lhs else {
                             bail!("{} is not a number", lhs)
                         };
                         rhs.contains(lhs)
@@ -152,10 +152,10 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
             } => {
                 let lhs = &eval(lhs, memory.clone(), funs.clone())?;
                 let rhs = &eval(rhs, memory, funs)?;
-                let Algebra::Scalar(lhs) = lhs else {
+                let Algebra::Number(lhs) = lhs else {
                     bail!("only intervals of numbers are defined")
                 };
-                let Algebra::Scalar(rhs) = rhs else {
+                let Algebra::Number(rhs) = rhs else {
                     bail!("only intervals of numbers are defined")
                 };
                 return Ok(Algebra::Interval(Interval::checked(lhs, rhs)?));
@@ -198,13 +198,13 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
             Apply(ref name, ref exprs) if name == "rand" => {
                 fn random() -> Algebra {
                     let r = rand::random_range(0.0..1.0);
-                    Algebra::Scalar(Number::Float(r.into()))
+                    Algebra::Number(Number::Float(r.into()))
                 }
                 match exprs.len() {
                     0 => return Ok(random()),
                     1 => {
                         let val = eval(&exprs[0], memory, funs)?;
-                        if let Algebra::Scalar(ref n) = val
+                        if let Algebra::Number(ref n) = val
                             && let Number::Integer(n) = n
                         {
                             let vals: Vec<Algebra> = std::iter::from_fn(|| Some(random()))
@@ -245,7 +245,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                 }
                 let val = match eval(&exprs[0], memory, funs)? {
                     Algebra::Vector(ref v) => v.min(),
-                    Algebra::Interval(ref a) => Algebra::Scalar(a.lower.clone()),
+                    Algebra::Interval(ref a) => Algebra::Number(a.lower.clone()),
                     other => other,
                 };
                 return Ok(val);
@@ -260,7 +260,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                 }
                 let val = match eval(&exprs[0], memory, funs)? {
                     Algebra::Vector(ref v) => v.max(),
-                    Algebra::Interval(ref a) => Algebra::Scalar(a.upper.clone()),
+                    Algebra::Interval(ref a) => Algebra::Number(a.upper.clone()),
                     other => other,
                 };
                 return Ok(val);
@@ -272,7 +272,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                 return vec_apply(name, exprs, memory, funs, |v| v.prod());
             }
             Apply(ref name, ref exprs) if name == "len" => {
-                return Ok(Algebra::Scalar(vec_apply(
+                return Ok(Algebra::Number(vec_apply(
                     name,
                     exprs,
                     memory,
@@ -329,7 +329,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                 }
                 let mut acc = Vec::new();
                 while &this <= &end {
-                    acc.push(Algebra::Scalar(this.clone()));
+                    acc.push(Algebra::Number(this.clone()));
                     this = &this + &step;
                 }
                 return Ok(Algebra::Vector(acc.into()));
@@ -483,7 +483,7 @@ fn vec_apply<T>(
 
 fn eval_to_number(expr: &Expr, memory: Memory, funs: Functions) -> Result<Number> {
     let val = eval(expr, memory, funs)?;
-    if let Algebra::Scalar(val) = val {
+    if let Algebra::Number(val) = val {
         Ok(val)
     } else {
         bail!("{} is not a number", val)
@@ -493,7 +493,7 @@ fn eval_to_number(expr: &Expr, memory: Memory, funs: Functions) -> Result<Number
 fn extract(vector: &vector::Vector, index: &Algebra) -> Result<Algebra> {
     use Algebra::*;
     match index {
-        Scalar(index) => {
+        Number(index) => {
             if let Some(index) = index.to_usize()
                 && index >= 1
             {
@@ -512,7 +512,7 @@ fn extract(vector: &vector::Vector, index: &Algebra) -> Result<Algebra> {
         Vector(indexes) => {
             let mut acc = Vec::new();
             for i in &indexes.0 {
-                if let Scalar(i) = i
+                if let Number(i) = i
                     && let Some(i) = i.to_usize()
                     && i >= 1
                 {

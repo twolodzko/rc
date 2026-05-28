@@ -49,7 +49,7 @@ impl Vector {
         self.zip(rhs)
             .map(|(a, b)| a * b)
             .reduce(|ref acc, ref e| acc + e)
-            .unwrap_or(Algebra::Scalar(Number::ZERO))
+            .unwrap_or(Algebra::Number(Number::ZERO))
     }
 
     pub fn min(&self) -> Algebra {
@@ -62,9 +62,9 @@ impl Vector {
 
     pub fn sum(&self) -> Algebra {
         if self.is_empty() {
-            return Algebra::Scalar(Number::ZERO);
+            return Algebra::Number(Number::ZERO);
         }
-        let mut sum = Algebra::Scalar(Number::ZERO);
+        let mut sum = Algebra::Number(Number::ZERO);
         for v in &self.0 {
             sum = &sum + v;
         }
@@ -73,9 +73,9 @@ impl Vector {
 
     pub fn prod(&self) -> Algebra {
         if self.is_empty() {
-            return Algebra::Scalar(Number::Integer(BigInt::one()));
+            return Algebra::Number(Number::Integer(BigInt::one()));
         }
-        let mut prod = Algebra::Scalar(Number::Integer(BigInt::one()));
+        let mut prod = Algebra::Number(Number::Integer(BigInt::one()));
         for v in &self.0 {
             prod = &prod * v;
         }
