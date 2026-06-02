@@ -1,4 +1,5 @@
-name      = @{ (LETTER | "_") ~ (LETTER | ASCII_DIGIT | "_")* }
+name      = @{ (LETTER | "_") ~ name_char* }
+name_char =  { LETTER | ASCII_DIGIT | "_" }
 value     = _{ complex | float | vector }
 float     = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT*)? ~ (^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+)? }
 complex   =  { (float ~ "+")? ~ imaginary }
@@ -44,13 +45,13 @@ le          =  { "<=" }
 gt          =  { ">" }
 ge          =  { ">=" }
 same_type   =  { "?=" }
-logical_or  =  { "or" }
-logical_and =  { "and" }
+logical_or  =  @{ "or" ~ !name_char }
+logical_and =  @{ "and" ~ !name_char }
 bit_or      =  { "|" }
 bit_and     =  { "&" }
 at          =  { "@" }
 interval    =  { "~" }
-is_in       =  { "in" }
+is_in       =  @{ "in" ~ !name_char }
 get         =  { ":" }
 term        = _{ (neg ~ !WHITESPACE)? ~ atom ~ fact? }
 fact        = @{ "!" ~ !"=" }
@@ -58,8 +59,10 @@ neg         =  { "-" }
 atom        = _{ print_fn | error_fn | apply | ifelse | name | value | abs | block | "(" ~ expression ~ ")" }
 abs         =  { "|" ~ expression ~ "|" }
 apply       =  { name ~ "(" ~ (expression ~ ("," ~ expression)*)? ~ ")" }
+// TODO: expect whitespaces after keywords
 function    =  { "fun" ~ name ~ "(" ~ (name ~ ("," ~ name)*)? ~ ")" ~ expression }
 block       =  { "{" ~ (expression ~ ";"?)+ ~ "}" }
+// TODO: expect whitespaces after keywords
 ifelse      =  { "if" ~ expression ~ "then" ~ expression ~ "else" ~ expression }
 
 print_fn = { "print" ~ template }

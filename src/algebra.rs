@@ -231,6 +231,14 @@ impl Rem for &Algebra {
     type Output = Algebra;
 
     fn rem(self, rhs: Self) -> Self::Output {
+        if let (Interval(a), Number(b)) = (&self, &rhs) {
+            // edge case, for non-monotonic reminder function
+            let b = interval::Interval {
+                lower: b.clone(),
+                upper: b.clone(),
+            };
+            return Interval(a % &b);
+        }
         apply!(self, rem, rhs)
     }
 }

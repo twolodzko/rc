@@ -291,10 +291,6 @@ impl Rem for &Interval {
             let a = self.lower.rem(&rhs.lower);
             let b = self.lower.rem(&rhs.upper);
             return Interval::ordered(a, b);
-        } else if rhs.is_singular() {
-            let a = self.lower.rem(&rhs.lower);
-            let b = self.upper.rem(&rhs.lower);
-            return Interval::ordered(a, b);
         }
 
         let value = Interval::ordered(self.lower.abs(), self.upper.abs());
