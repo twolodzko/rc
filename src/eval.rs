@@ -61,10 +61,11 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
             } => {
                 // early stop
                 let val = eval(lhs, memory.clone(), funs.clone())?;
-                return if val.is_nan() {
+                if val.is_nan() {
                     return Ok(val);
                 } else {
-                    eval(rhs, memory, funs)
+                    // tail-call optimization
+                    expr = *rhs.clone();
                 };
             }
             BinaryOp {
@@ -73,11 +74,12 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                 ref rhs,
             } => {
                 // ignore failure
-                return match eval(lhs, memory.clone(), funs.clone()) {
-                    Ok(val) if !val.is_nan() => Ok(val),
+                match eval(lhs, memory.clone(), funs.clone()) {
+                    Ok(val) if !val.is_nan() => return Ok(val),
                     Err(err) if !err.is::<AssertionError>() => bail!(err),
-                    _ => eval(rhs, memory, funs),
-                };
+                    // tail-call optimization
+                    _ => expr = *rhs.clone(),
+                }
             }
             BinaryOp {
                 ref lhs,
