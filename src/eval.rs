@@ -402,17 +402,13 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                 return Ok(Algebra::NAN);
             }
             Print(ref template) => {
-                let mut last = Algebra::NAN;
-                for t in template {
-                    match t {
-                        Template::String(s) => print!("{}", s),
-                        Template::Field(e) => {
-                            last = eval(e, memory.clone(), funs.clone())?;
-                            print!("{}", last)
-                        }
-                    }
-                }
+                let (msg, last) = eval_template(template, memory, funs)?;
+                print!("{}", msg);
                 return Ok(last);
+            }
+            Error(ref template) => {
+                let (msg, _) = eval_template(template, memory, funs)?;
+                bail!(msg)
             }
             Load(ref path) => return eval_file(path, memory, funs),
         }
@@ -526,4 +522,24 @@ fn extract(vector: &vector::Vector, index: &Algebra) -> Result<Algebra> {
         }
     }
     bail!("{} is not a valid index", index)
+}
+
+fn eval_template(
+    template: &[Template],
+    memory: Memory,
+    funs: Functions,
+) -> Result<(String, Algebra)> {
+    let mut msg = String::new();
+    let mut last = Algebra::NAN;
+    for t in template {
+        let s = match t {
+            Template::String(s) => s,
+            Template::Field(e) => {
+                last = eval(e, memory.clone(), funs.clone())?;
+                &last.to_string()
+            }
+        };
+        msg.push_str(s);
+    }
+    Ok((msg, last))
 }

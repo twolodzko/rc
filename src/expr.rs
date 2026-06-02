@@ -18,6 +18,7 @@ pub enum Expr {
     IfElse(Box<Expr>, Box<Expr>, Box<Expr>),
     Load(PathBuf),
     Print(Vec<Template>),
+    Error(Vec<Template>),
 }
 
 #[derive(Debug, Clone)]
@@ -143,6 +144,15 @@ impl std::fmt::Display for Expr {
             Print(template) => write!(
                 f,
                 "print({})",
+                template
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<String>>()
+                    .join(",")
+            ),
+            Error(template) => write!(
+                f,
+                "error({})",
                 template
                     .iter()
                     .map(ToString::to_string)

@@ -215,6 +215,7 @@ fn basic(input: &str, expexted: &str) {
 #[test_case("[] ?= 11~22"; "list and interval have different types")]
 #[test_case("1 ?= 5.0"; "integer and float have different types")]
 #[test_case("1/2 ?= 0.5"; "rational and float have different types")]
+#[test_case("error()"; "empty error")]
 fn expect_error(input: &str) {
     let (memory, funs) = init();
     assert!(eval_string(input, memory, funs).is_err())

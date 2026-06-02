@@ -43,6 +43,12 @@
 	[ "$status" -eq 0 ]
 }
 
+@test "Custom errors" {
+	run ./rc --quiet 'error(2+2 != {9/2})'
+	[ "${lines[0]}" = "error: 2+2 != 9/2" ]
+	[ "$status" -eq 2 ]
+}
+
 @test "Binomial coefficient" {
 	run ./rc -f examples/binomial.rc
 	[ "$status" -eq 0 ]

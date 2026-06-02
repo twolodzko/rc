@@ -218,28 +218,15 @@ fn parse_expr(pairs: Pairs<Rule>) -> Result<Expr> {
                 let no = parse_expr(inner.next().unwrap().into_inner())?;
                 Ok(Expr::IfElse(Box::new(cond), Box::new(yes), Box::new(no)))
             }
-            Rule::template => {
-                let inner = primary.into_inner();
-                let mut acc = Vec::new();
-                for val in inner {
-                    let val = match val.as_rule() {
-                        Rule::field => {
-                            let pairs = val.into_inner();
-                            let expr = parse_expr(pairs)?;
-                            Template::Field(expr)
-                        }
-                        Rule::string => Template::String(val.to_string()),
-                        Rule::escaped => {
-                            let Some(s) = unescape(val.as_str()) else {
-                                bail!("invalid escape sequence: {}", val.as_str())
-                            };
-                            Template::String(s.to_string())
-                        }
-                        _ => bail!("unexpected {}", val),
-                    };
-                    acc.push(val);
-                }
+            Rule::print_fn => {
+                let inner = primary.into_inner().next().unwrap().into_inner();
+                let acc = parse_template(inner)?;
                 Ok(Expr::Print(acc))
+            }
+            Rule::error_fn => {
+                let inner = primary.into_inner().next().unwrap().into_inner();
+                let acc = parse_template(inner)?;
+                Ok(Expr::Error(acc))
             }
             rule => bail!("unexpected {:?}", rule),
         })
@@ -291,6 +278,29 @@ fn parse_expr(pairs: Pairs<Rule>) -> Result<Expr> {
             _ => unreachable!(),
         })
         .parse(pairs)
+}
+
+fn parse_template(inner: Pairs<'_, Rule>) -> Result<Vec<Template>> {
+    let mut acc = Vec::new();
+    for val in inner {
+        let val = match val.as_rule() {
+            Rule::field => {
+                let pairs = val.into_inner();
+                let expr = parse_expr(pairs)?;
+                Template::Field(expr)
+            }
+            Rule::string => Template::String(val.to_string()),
+            Rule::escaped => {
+                let Some(s) = unescape(val.as_str()) else {
+                    bail!("invalid escape sequence: {}", val.as_str())
+                };
+                Template::String(s.to_string())
+            }
+            _ => bail!("unexpected {}", val),
+        };
+        acc.push(val);
+    }
+    Ok(acc)
 }
 
 fn parse_imag(pair: Pair<Rule>) -> Result<f64> {
