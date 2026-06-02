@@ -1,0 +1,23 @@
+
+fun _test(data) {
+   interval = min(data)~max(data)
+   val = rand() * max(data) * 2 - max(data)
+
+   mul = data * val
+   interval * val = min(mul)~max(mul)
+
+   div = data / val
+   interval / val = min(div)~max(div)
+
+   idiv = data // val
+   interval // val = min(idiv)~max(idiv)
+}
+
+fun repeat(data, n) {
+   if n > 0 then
+      _test(data) and repeat(data, n - 1)
+   else n
+}
+
+data = seq(-10, 10, 0.01)
+repeat(data, 1000)

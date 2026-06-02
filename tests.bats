@@ -79,3 +79,8 @@
 	run ./rc -f examples/isqrt_map.rc
 	[ "$status" -eq 0 ]
 }
+
+@test "Interval tests" {
+	run ./rc -f examples/interval_tests.rc
+	[ "$status" -eq 0 ]
+}
