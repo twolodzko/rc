@@ -231,15 +231,15 @@ impl Rem for &Algebra {
     type Output = Algebra;
 
     fn rem(self, rhs: Self) -> Self::Output {
-        if let (Interval(a), Number(b)) = (&self, &rhs) {
-            // edge case, for non-monotonic reminder function
-            let b = interval::Interval {
-                lower: b.clone(),
-                upper: b.clone(),
-            };
-            return Interval(a % &b);
+        match (&self, &rhs) {
+            (Number(a), Number(b)) => Number(a % b),
+            (Interval(a), Number(b)) => Interval(a % &interval::Interval::from(b)),
+            (Number(a), Interval(b)) => Interval(&interval::Interval::from(a) % b),
+            (Interval(a), Interval(b)) => Interval(a % b),
+            (Vector(a), Vector(b)) => Vector(a.zip_map(b, |(x, y)| x % y)),
+            (_, Vector(b)) => Vector(b.map(|x| self % x)),
+            (Vector(a), _) => Vector(a.map(|x| x % rhs)),
         }
-        apply!(self, rem, rhs)
     }
 }
 
