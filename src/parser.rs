@@ -66,14 +66,14 @@ pub fn parse(input: &str) -> Result<Vec<Expr>> {
 
 fn parse_fun(pair: Pair<Rule>) -> Result<Expr> {
     let mut inner = pair.into_inner();
-    let name = parse_var(inner.next().unwrap())?;
+    let name = parse_var(inner.next().unwrap());
 
     let mut args = Vec::new();
-    while let Some(pair) = inner.peek()
-        && let Ok(arg) = parse_var(pair)
-    {
-        inner.next();
-        args.push(arg);
+    if inner.peek().unwrap().as_rule() == Rule::parameters {
+        let iter = inner.next().unwrap().into_inner();
+        for pair in iter {
+            args.push(parse_var(pair));
+        }
     }
 
     let inner = inner.next().unwrap().into_inner();
@@ -86,11 +86,9 @@ fn parse_fun(pair: Pair<Rule>) -> Result<Expr> {
     Ok(Expr::Function(Function { name, args, body }))
 }
 
-fn parse_var(pair: Pair<Rule>) -> Result<String> {
-    let Rule::name = pair.as_rule() else {
-        bail!("unexpected {}", pair)
-    };
-    Ok(pair.to_string())
+fn parse_var(pair: Pair<Rule>) -> String {
+    debug_assert_eq!(pair.as_rule(), Rule::name);
+    pair.to_string()
 }
 
 fn parse_expr(pairs: Pairs<Rule>) -> Result<Expr> {
@@ -98,12 +96,12 @@ fn parse_expr(pairs: Pairs<Rule>) -> Result<Expr> {
         .map_primary(|primary| match primary.as_rule() {
             Rule::apply => {
                 let mut inner = primary.into_inner();
-                let name = parse_var(inner.next().unwrap())?;
+                let name = parse_var(inner.next().unwrap());
                 let mut args = Vec::new();
-                for pair in inner {
-                    let expr = parse_expr(pair.into_inner())?;
-                    args.push(expr);
+                if let Some(inner) = inner.next() {
+                    args = parse_args(inner)?;
                 }
+
                 let method = match name.as_str() {
                     "abs" => Method::Abs,
                     "acos" => Method::Acos,
@@ -203,11 +201,9 @@ fn parse_expr(pairs: Pairs<Rule>) -> Result<Expr> {
                 )))))
             }
             Rule::vector => {
-                let inner = primary.into_inner();
                 let mut acc = Vec::new();
-                for pair in inner {
-                    let expr = parse_expr(pair.into_inner())?;
-                    acc.push(expr);
+                if let Some(inner) = primary.into_inner().next() {
+                    acc = parse_args(inner)?;
                 }
                 Ok(Expr::NewVec(acc))
             }
@@ -278,6 +274,17 @@ fn parse_expr(pairs: Pairs<Rule>) -> Result<Expr> {
             _ => unreachable!(),
         })
         .parse(pairs)
+}
+
+fn parse_args(primary: Pair<'_, Rule>) -> Result<Vec<Expr>> {
+    debug_assert_eq!(primary.as_rule(), Rule::arguments);
+    let mut acc = Vec::new();
+    let inner = primary.into_inner();
+    for pair in inner {
+        let expr = parse_expr(pair.into_inner())?;
+        acc.push(expr);
+    }
+    Ok(acc)
 }
 
 fn parse_template(inner: Pairs<'_, Rule>) -> Result<Vec<Template>> {

@@ -7,6 +7,7 @@ use crate::{
 };
 use anyhow::{Result, anyhow, bail};
 use num::{BigInt, One};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra> {
     use Expr::*;
@@ -426,10 +427,11 @@ impl Function {
                 count: args.len()
             })
         }
-        let local: Memory = Default::default();
+        let mut local = HashMap::new();
         for (key, val) in std::iter::zip(self.args.iter(), args) {
-            local.borrow_mut().insert(key.to_string(), val.clone());
+            local.insert(key.to_string(), val.clone());
         }
+        let local = Rc::new(RefCell::new(local));
         // tail-call optimization
         if self.body.len() == 1 {
             return Ok((self.body[0].clone(), local));

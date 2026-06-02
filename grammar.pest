@@ -4,9 +4,9 @@ value     = _{ complex | float | vector }
 float     = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT*)? ~ (^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+)? }
 complex   =  { (float ~ "+")? ~ imaginary }
 imaginary = @{ float? ~ "i" }
-vector    =  { "[" ~ (expression ~ ("," ~ expression)*)? ~ "]" }
+vector    =  { "[" ~ arguments? ~ "]" }
 
-expression  =  { term ~ (operator ~ term)* }
+expression  = !{ term ~ (operator ~ term)* }
 operator    = _{
     add
   | sub
@@ -45,38 +45,38 @@ le          =  { "<=" }
 gt          =  { ">" }
 ge          =  { ">=" }
 same_type   =  { "?=" }
-logical_or  =  @{ "or" ~ !name_char }
-logical_and =  @{ "and" ~ !name_char }
+logical_or  = @{ "or" ~ !name_char }
+logical_and = @{ "and" ~ !name_char }
 bit_or      =  { "|" }
 bit_and     =  { "&" }
 at          =  { "@" }
 interval    =  { "~" }
-is_in       =  @{ "in" ~ !name_char }
+is_in       = @{ "in" ~ !name_char }
 get         =  { ":" }
 term        = _{ (neg ~ !WHITESPACE)? ~ atom ~ fact? }
 fact        = @{ "!" ~ !"=" }
 neg         =  { "-" }
 atom        = _{ print_fn | error_fn | apply | ifelse | name | value | abs | block | "(" ~ expression ~ ")" }
 abs         =  { "|" ~ expression ~ "|" }
-apply       =  { name ~ "(" ~ (expression ~ ("," ~ expression)*)? ~ ")" }
-// TODO: expect whitespaces after keywords
-function    =  { "fun" ~ name ~ "(" ~ (name ~ ("," ~ name)*)? ~ ")" ~ expression }
+arguments   = !{ expression ~ ("," ~ expression)* }
+apply       = ${ name ~ "(" ~ arguments? ~ ")" }
+function    =  { "fun" ~ name ~ "(" ~ parameters? ~ ")" ~ expression }
+parameters  = !{ name ~ ("," ~ name)* }
 block       =  { "{" ~ (expression ~ ";"?)+ ~ "}" }
-// TODO: expect whitespaces after keywords
 ifelse      =  { "if" ~ expression ~ "then" ~ expression ~ "else" ~ expression }
 
-print_fn = { "print" ~ template }
-error_fn = { "error" ~ template }
+print_fn = ${ "print" ~ template }
+error_fn = ${ "error" ~ template }
 template = ${ "(" ~ (string | escaped | field)* ~ ")" }
 string   = @{ (!(")" | "{" | "\\") ~ ANY)+ }
 escaped  = @{
     "\\" ~ (("u" ~ ASCII_ALPHANUMERIC{4}) | ("x" ~ ASCII_ALPHANUMERIC{2}) | ANY)
 }
-field    = ${ "{" ~ expression ~ "}" }
+field    = !{ "{" ~ expression ~ "}" }
 
 program =  { SOI ~ (line ~ ";"?)* ~ EOI }
 line    = _{ load | function | expression }
-load    =  { "load" ~ "(" ~ path ~ ")" }
+load    = ${ "load" ~ "(" ~ WHITESPACE* ~ path ~ WHITESPACE* ~ ")" }
 path    =  { (!")" ~ ("\\)" | ANY))* }
 
 COMMENT    = _{ "#" ~ (!NEWLINE ~ ANY)* }
