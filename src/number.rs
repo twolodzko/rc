@@ -101,6 +101,13 @@ impl Number {
         }
     }
 
+    pub fn is_even(&self) -> bool {
+        if let Integer(x) = self.cast_to_integer() {
+            return (x % 2i32).is_zero();
+        }
+        false
+    }
+
     pub fn abs(&self) -> Number {
         match self {
             Integer(x) => Integer(x.abs()),

@@ -252,7 +252,7 @@ impl Pow<&Algebra> for &Algebra {
         }
         match (&self, &rhs) {
             (Number(a), Number(b)) => Number(a.pow(b)),
-            (Interval(a), Number(b)) => Interval(a.pow(&interval::Interval::from(b))),
+            (Interval(a), Number(b)) => Interval(a.pow(b)),
             (Number(a), Interval(b)) => Interval(interval::Interval::from(a).pow(b)),
             (Interval(a), Interval(b)) => Interval(a.pow(b)),
             (Vector(a), Vector(b)) => Vector(a.zip_map(b, |(x, y)| x.pow(y))),

@@ -345,11 +345,8 @@ impl Pow<&Interval> for &Interval {
             let a = self.lower.pow(&rhs.lower);
             let b = self.lower.pow(&rhs.upper);
             return Interval::ordered(a, b);
-        } else if rhs.is_singular() && (self.upper.is_negative() || self.lower.is_positive()) {
-            // TODO: check if we are handling correctly situation of crossing zero in (-x~x)^(y~y) = (-x~x)^y
-            let a = self.lower.pow(&rhs.lower);
-            let b = self.upper.pow(&rhs.lower);
-            return Interval::ordered(a, b);
+        } else if rhs.is_singular() {
+            return self.pow(&rhs.lower);
         }
 
         // "Interval Arithmetic Specification" by Chiriaev et al (1998)
@@ -391,6 +388,30 @@ impl Pow<&Interval> for &Interval {
                 lower: Number::NEG_INFINITY,
                 upper: Number::INFINITY,
             }
+        }
+    }
+}
+
+impl Pow<&Number> for &Interval {
+    type Output = Interval;
+
+    fn pow(self, rhs: &Number) -> Self::Output {
+        // TODO: check if we are handling correctly situation of crossing zero in (-x~x)^y
+        if self.upper.is_negative() || self.lower.is_positive() {
+            let a = self.lower.pow(rhs);
+            let b = self.upper.pow(rhs);
+            Interval::ordered(a, b)
+        } else if rhs.is_even() {
+            let a = self.lower.pow(rhs);
+            let b = self.upper.pow(rhs);
+            Interval {
+                lower: Number::ZERO,
+                upper: a.max(&b).clone(),
+            }
+        } else {
+            let a = self.lower.pow(rhs);
+            let b = self.upper.pow(rhs);
+            Interval::ordered(a, b)
         }
     }
 }
