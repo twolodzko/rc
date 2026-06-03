@@ -250,7 +250,15 @@ impl Pow<&Algebra> for &Algebra {
         if rhs.is_one() {
             return self.clone();
         }
-        apply!(self, pow, rhs)
+        match (&self, &rhs) {
+            (Number(a), Number(b)) => Number(a.pow(b)),
+            (Interval(a), Number(b)) => Interval(a.pow(&interval::Interval::from(b))),
+            (Number(a), Interval(b)) => Interval(interval::Interval::from(a).pow(b)),
+            (Interval(a), Interval(b)) => Interval(a.pow(b)),
+            (Vector(a), Vector(b)) => Vector(a.zip_map(b, |(x, y)| x.pow(y))),
+            (_, Vector(b)) => Vector(b.map(|x| self.pow(x))),
+            (Vector(a), _) => Vector(a.map(|x| x.pow(rhs))),
+        }
     }
 }
 

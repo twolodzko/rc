@@ -1,7 +1,14 @@
 
-fun _test(data) {
+fun _arith_test() {
+   data = seq(-10, 10, 0.01)
    interval = min(data)~max(data)
    val = rand() * max(data) * 2 - max(data)
+
+   add = data + val
+   interval + val = min(add)~max(add)
+
+   sub = data - val
+   interval - val = min(sub)~max(sub)
 
    mul = data * val
    interval * val = min(mul)~max(mul)
@@ -13,11 +20,25 @@ fun _test(data) {
    interval // val = min(idiv)~max(idiv)
 }
 
-fun repeat(data, n) {
-   if n > 0 then
-      _test(data) and repeat(data, n - 1)
-   else n
+fun _pow_test() {
+   data = seq(1, 10)
+   x = floor(rand() * max(data) * 2 - max(data))
+   interval = min(data)~max(data)
+
+   pow = data ^ x
+   interval ^ x = min(pow)~max(pow)
+
+   y = floor(rand() * max(data) * 2 - max(data))
+   ipow = data ^ (y/x)
+   interval ^ (y/x) = min(ipow)~max(ipow)
 }
 
-data = seq(-10, 10, 0.01)
-repeat(data, 1000)
+fun repeat(n) {
+   if n > 0 then {
+      _arith_test()
+      _pow_test()
+      repeat(n - 1)
+   } else n
+}
+
+repeat(1000)
