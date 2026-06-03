@@ -345,7 +345,8 @@ impl Pow<&Interval> for &Interval {
             let a = self.lower.pow(&rhs.lower);
             let b = self.lower.pow(&rhs.upper);
             return Interval::ordered(a, b);
-        } else if rhs.is_singular() {
+        } else if rhs.is_singular() && (self.upper.is_negative() || self.lower.is_positive()) {
+            // TODO: check if we are handling correctly situation of crossing zero in (-x~x)^(y~y) = (-x~x)^y
             let a = self.lower.pow(&rhs.lower);
             let b = self.upper.pow(&rhs.lower);
             return Interval::ordered(a, b);
