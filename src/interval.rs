@@ -396,22 +396,30 @@ impl Pow<&Number> for &Interval {
     type Output = Interval;
 
     fn pow(self, rhs: &Number) -> Self::Output {
-        // TODO: check if we are handling correctly situation of crossing zero in (-x~x)^y
+        // TODO: is this correct?
         if self.upper.is_negative() || self.lower.is_positive() {
+            // interval is on the negative or positive side
             let a = self.lower.pow(rhs);
             let b = self.upper.pow(rhs);
             Interval::ordered(a, b)
         } else if rhs.is_even() {
-            let a = self.lower.pow(rhs);
-            let b = self.upper.pow(rhs);
-            Interval {
-                lower: Number::ZERO,
-                upper: a.max(&b).clone(),
-            }
+            let lower = Number::ZERO;
+            let upper = if rhs.is_negative() {
+                Number::INFINITY
+            } else {
+                let a = self.lower.pow(rhs);
+                let b = self.upper.pow(rhs);
+                a.max(&b).clone()
+            };
+            Interval { lower, upper }
         } else {
-            let a = self.lower.pow(rhs);
-            let b = self.upper.pow(rhs);
-            Interval::ordered(a, b)
+            if rhs.is_negative() {
+                Interval::INFINITY
+            } else {
+                let a = self.lower.pow(rhs);
+                let b = self.upper.pow(rhs);
+                Interval::ordered(a, b)
+            }
         }
     }
 }
