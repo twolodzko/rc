@@ -345,6 +345,10 @@ impl Pow<&Interval> for &Interval {
             let a = self.lower.pow(&rhs.lower);
             let b = self.lower.pow(&rhs.upper);
             return Interval::ordered(a, b);
+        } else if rhs.is_singular() {
+            let a = self.lower.pow(&rhs.lower);
+            let b = self.upper.pow(&rhs.lower);
+            return Interval::ordered(a, b);
         }
 
         // "Interval Arithmetic Specification" by Chiriaev et al (1998)

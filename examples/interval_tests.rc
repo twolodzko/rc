@@ -23,14 +23,17 @@ fun _arith_test() {
 fun _pow_test() {
    data = seq(1, 10)
    x = floor(rand() * max(data) * 2 - max(data))
+   y = floor(rand() * max(data) * 2 - max(data))
    interval = min(data)~max(data)
 
    pow = data ^ x
    interval ^ x = min(pow)~max(pow)
 
-   y = floor(rand() * max(data) * 2 - max(data))
-   ipow = data ^ (y/x)
-   interval ^ (y/x) = min(ipow)~max(ipow)
+   # for y/x that is not NaN
+   k = y/x and {
+      ipow = data ^ k
+      interval ^ k = min(ipow)~max(ipow)
+   }
 }
 
 fun repeat(n) {
