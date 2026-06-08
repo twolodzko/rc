@@ -627,3 +627,115 @@ fn intervals(input: &str, expexted: &str) {
     let result = eval_string(input, memory, funs).expect("unexpected error");
     assert_eq!(result.to_string(), expexted)
 }
+
+#[test]
+fn interval_positive_int_power() {
+    for (a, b) in &[(-10, 0), (-10, 10), (0, 10)] {
+        let vec = format!(
+            "[{}]",
+            (*a..=*b)
+                .into_iter()
+                .map(|x| x.to_string())
+                .collect::<Vec<String>>()
+                .join(", ")
+        );
+        for pow in 0..=10 {
+            let (memory, funs) = init();
+            let vector = eval_string(
+                &format!("({})^({})", vec, pow),
+                memory.clone(),
+                funs.clone(),
+            )
+            .unwrap();
+            let min_max = eval_string(
+                &format!("min({})~max({})", vector, vector),
+                memory.clone(),
+                funs.clone(),
+            )
+            .unwrap();
+            let interval = eval_string(
+                &format!("(({})~({}))^({})", a, b, pow),
+                memory.clone(),
+                funs.clone(),
+            )
+            .unwrap();
+            if eval_string(&format!("{} = {}", min_max, interval), memory, funs).is_err() {
+                panic!(
+                    "{}~{}^{} resulted in {} != {}",
+                    a, b, pow, min_max, interval
+                )
+            }
+        }
+    }
+
+    for (a, b) in &[(-10, -1), (1, 10)] {
+        let vec = format!(
+            "[{}]",
+            (*a..=*b)
+                .into_iter()
+                .map(|x| x.to_string())
+                .collect::<Vec<String>>()
+                .join(", ")
+        );
+        for pow in -10..=10 {
+            let (memory, funs) = init();
+            let vector = eval_string(
+                &format!("({})^({})", vec, pow),
+                memory.clone(),
+                funs.clone(),
+            )
+            .unwrap();
+            let min_max = eval_string(
+                &format!("min({})~max({})", vector, vector),
+                memory.clone(),
+                funs.clone(),
+            )
+            .unwrap();
+            let interval = eval_string(
+                &format!("(({})~({}))^({})", a, b, pow),
+                memory.clone(),
+                funs.clone(),
+            )
+            .unwrap();
+            if min_max != interval {
+                panic!(
+                    "{}~{}^{} resulted in {} != {}",
+                    a, b, pow, min_max, interval
+                )
+            }
+        }
+    }
+}
+
+// #[test]
+// fn interval_float_power() {
+//     let mut acc = Vec::new();
+//     let mut x = -10.0;
+//     while x <= 10.0 {
+//         acc.push(x);
+//         x += 0.01;
+//     }
+//     let vec = format!(
+//         "[{}]",
+//         acc.into_iter()
+//             .map(|x| x.to_string())
+//             .collect::<Vec<String>>()
+//             .join(", ")
+//     );
+//     for pow in 0..=10 {
+//         let (memory, funs) = init();
+//         let vector =
+//             eval_string(&format!("{}^{}", vec, pow), memory.clone(), funs.clone()).unwrap();
+//         let min_max = eval_string(
+//             &format!("min({})~max({})", vector, vector),
+//             memory.clone(),
+//             funs.clone(),
+//         )
+//         .unwrap();
+//         let interval =
+//             eval_string(&format!("((-10)~10)^{}", pow), memory.clone(), funs.clone()).unwrap();
+//         if eval_string(&format!("{} = {}", min_max, interval), memory, funs).is_err() {
+//             panic!("-10~10-^{} resulted in {} != {}", pow, min_max, interval)
+//         }
+//     }
+// }

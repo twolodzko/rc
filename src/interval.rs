@@ -345,7 +345,8 @@ impl Pow<&Interval> for &Interval {
             let a = self.lower.pow(&rhs.lower);
             let b = self.lower.pow(&rhs.upper);
             return Interval::ordered(a, b);
-        } else if rhs.is_singular() {
+        }
+        if rhs.is_singular() {
             return self.pow(&rhs.lower);
         }
 
@@ -384,10 +385,7 @@ impl Pow<&Interval> for &Interval {
         } else {
             // base can be anything, the exponent is negative
             // so it becomes 1/inf all the way to 1/-inf
-            Interval {
-                lower: Number::NEG_INFINITY,
-                upper: Number::INFINITY,
-            }
+            Interval::INFINITY
         }
     }
 }
@@ -396,6 +394,18 @@ impl Pow<&Number> for &Interval {
     type Output = Interval;
 
     fn pow(self, rhs: &Number) -> Self::Output {
+        if self.is_infinite() || rhs.is_infinite() {
+            return Interval::INFINITY;
+        }
+        if rhs.is_zero() {
+            return Interval {
+                lower: Number::Integer(BigInt::one()),
+                upper: Number::Integer(BigInt::one()),
+            };
+        }
+        if rhs.is_one() {
+            return self.clone();
+        }
         // TODO: is this correct?
         if self.upper.is_negative() || self.lower.is_positive() {
             // interval is on the negative or positive side
@@ -403,6 +413,7 @@ impl Pow<&Number> for &Interval {
             let b = self.upper.pow(rhs);
             Interval::ordered(a, b)
         } else if rhs.is_even() {
+            // positive power, so result is on the positive side
             let lower = Number::ZERO;
             let upper = if rhs.is_negative() {
                 Number::INFINITY
