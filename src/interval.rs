@@ -160,7 +160,8 @@ impl Interval {
             let a = self.lower.idiv(&rhs.lower);
             let b = self.lower.idiv(&rhs.upper);
             return Interval::ordered(a, b);
-        } else if rhs.is_singular() {
+        }
+        if rhs.is_singular() {
             let a = self.lower.idiv(&rhs.lower);
             let b = self.upper.idiv(&rhs.lower);
             return Interval::ordered(a, b);
@@ -224,7 +225,8 @@ impl Mul for &Interval {
             let a = self.lower.mul(&rhs.lower);
             let b = self.lower.mul(&rhs.upper);
             return Interval::ordered(a, b);
-        } else if rhs.is_singular() {
+        }
+        if rhs.is_singular() {
             let a = self.lower.mul(&rhs.lower);
             let b = self.upper.mul(&rhs.lower);
             return Interval::ordered(a, b);
@@ -257,7 +259,8 @@ impl Div for &Interval {
             let a = self.lower.div(&rhs.lower);
             let b = self.lower.div(&rhs.upper);
             return Interval::ordered(a, b);
-        } else if rhs.is_singular() {
+        }
+        if rhs.is_singular() {
             let a = self.lower.div(&rhs.lower);
             let b = self.upper.div(&rhs.lower);
             return Interval::ordered(a, b);
@@ -394,6 +397,11 @@ impl Pow<&Number> for &Interval {
     type Output = Interval;
 
     fn pow(self, rhs: &Number) -> Self::Output {
+        // TODO: the interval vs scalar exponents are inconsistent, e.g.
+        //  > (-2~2)^(3.1~3.2)
+        //  -9.18958683997628~9.18958683997628
+        //  > (-2~2)^(3.1)
+        //  NaN~NaN
         if self.is_infinite() || rhs.is_infinite() {
             return Interval::INFINITY;
         }
@@ -408,12 +416,12 @@ impl Pow<&Number> for &Interval {
         }
         // TODO: is this correct?
         if self.upper.is_negative() || self.lower.is_positive() {
-            // interval is on the negative or positive side
+            // base is either on the negative or positive side
             let a = self.lower.pow(rhs);
             let b = self.upper.pow(rhs);
             Interval::ordered(a, b)
         } else if rhs.is_even() {
-            // positive power, so result is on the positive side
+            // positive exponent, so result is on the positive side
             let lower = Number::ZERO;
             let upper = if rhs.is_negative() {
                 Number::INFINITY

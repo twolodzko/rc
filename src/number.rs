@@ -2,6 +2,7 @@ use crate::{PRINT_AS_FLOAT, SCALE, expr::Method};
 use Number::*;
 use anyhow::{Result, bail};
 use num::{
+    Integer,
     bigint::{BigInt, ToBigInt},
     complex::Complex,
     rational::Ratio,
@@ -103,7 +104,7 @@ impl Number {
 
     pub fn is_even(&self) -> bool {
         if let Integer(x) = self.cast_to_integer() {
-            return (x % 2i32).is_zero();
+            return x.is_even();
         }
         false
     }
@@ -543,10 +544,9 @@ fn nth_root(x: Number, n: &BigInt) -> f64 {
     } else if n == &BigInt::from(3) {
         x.to_f64().cbrt()
     } else {
-        let even_exp = (n % BigInt::from(2)).is_zero();
         let exp = n.to_f64().unwrap_or(f64::NAN).inv();
         let r = x.abs().powf(exp);
-        if x.is_negative() && !even_exp { -r } else { r }
+        if x.is_negative() && n.is_odd() { -r } else { r }
     }
 }
 
