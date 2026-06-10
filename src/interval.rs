@@ -303,7 +303,15 @@ impl Rem for &Interval {
             // reminder applied
             let lower = if self.lower.is_negative() {
                 // the farthest we can get on the negative side
-                let almost_bound = Number::Float(modulus.upper.neg().to_f64().next_up().into());
+                let almost_bound = Number::Float(
+                    modulus
+                        .upper
+                        .neg()
+                        .to_f64()
+                        .unwrap_or(f64::NAN)
+                        .next_up()
+                        .into(),
+                );
                 self.lower.max(&almost_bound).clone()
             } else {
                 // both values are positive
@@ -314,7 +322,14 @@ impl Rem for &Interval {
                 Number::ZERO
             } else {
                 // the farthest we can get on the positive side
-                let almost_bound = Number::Float(modulus.upper.to_f64().next_down().into());
+                let almost_bound = Number::Float(
+                    modulus
+                        .upper
+                        .to_f64()
+                        .unwrap_or(f64::NAN)
+                        .next_down()
+                        .into(),
+                );
                 self.upper.min(&almost_bound).clone()
             };
             Interval { lower, upper }

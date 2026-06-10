@@ -352,7 +352,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                     })
                 }
                 let val = eval(&exprs[0], memory, funs)?;
-                return Ok(val.map(|x| x.cast_to_integer()));
+                return Ok(val.map(|x| x.to_bigint().map(Number::Integer).unwrap_or(Number::NAN)));
             }
             Apply(ref name, ref exprs) if name == "float" => {
                 if exprs.len() != 1 {
@@ -363,7 +363,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                     })
                 }
                 let val = eval(&exprs[0], memory, funs)?;
-                return Ok(val.map(|x| x.cast_to_float()));
+                return Ok(val.map(|x| x.to_f64().map(|f| f.into()).unwrap_or(Number::NAN)));
             }
             Apply(ref name, ref exprs) if name == "rat" => {
                 if exprs.len() != 1 {
