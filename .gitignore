@@ -1,3 +1,5 @@
 /target
 /rc
 /cargo-flamegraph.trace
+/flamegraph.svg
+/perf.data*
