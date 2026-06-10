@@ -321,7 +321,13 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                 };
                 let mut this = eval_to_number(&exprs[0], memory.clone(), funs.clone())?;
                 let end = eval_to_number(&exprs[1], memory, funs)?;
-                if this.is_nan() || end.is_nan() || step.is_nan() || &this > &end {
+                if this.is_nan()
+                    || end.is_nan()
+                    || step.is_nan()
+                    || step.is_zero()
+                    || (&this < &end && step.is_negative())
+                    || (&this > &end && step.is_positive())
+                {
                     bail!(
                         "invalid {} arguments: from {} to {} by {}",
                         name,

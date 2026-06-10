@@ -118,11 +118,8 @@ impl Interval {
         if self.is_nan() || k.is_nan() {
             return Interval::NAN;
         }
-        let pairs = self.cartesian(k, |a, b| a.choose(b));
-        Interval {
-            lower: pairs.iter().min().unwrap().clone(),
-            upper: pairs.iter().max().unwrap().clone(),
-        }
+        let (lower, upper) = self.min_max(k, |a, b| a.choose(b));
+        Interval { lower, upper }
     }
 
     /// Interval contains the value
@@ -133,14 +130,23 @@ impl Interval {
         &self.lower <= value && value <= &self.upper
     }
 
-    /// Function is applied to all the pairs of the interval bounds
-    pub fn cartesian(&self, other: &Interval, fun: fn(&Number, &Number) -> Number) -> Vec<Number> {
-        vec![
+    /// Min-max algorithm applies function to all the pairs of the interval bounds and returns min and max of the results
+    pub fn min_max(
+        &self,
+        other: &Interval,
+        fun: fn(&Number, &Number) -> Number,
+    ) -> (Number, Number) {
+        let cartesian = [
             fun(&self.lower, &other.lower),
             fun(&self.lower, &other.upper),
             fun(&self.upper, &other.lower),
             fun(&self.upper, &other.upper),
-        ]
+        ];
+        let start = (&cartesian[0], &cartesian[0]);
+        let (min, max) = cartesian[1..]
+            .iter()
+            .fold(start, |acc, e| (acc.0.min(e), acc.1.max(e)));
+        (min.clone(), max.clone())
     }
 
     pub fn idiv(&self, rhs: &Interval) -> Interval {
@@ -166,11 +172,8 @@ impl Interval {
             let b = self.upper.idiv(&rhs.lower);
             return Interval::ordered(a, b);
         }
-        let pairs = self.cartesian(rhs, |a, b| a.idiv(b));
-        Interval {
-            lower: pairs.iter().min().unwrap().clone(),
-            upper: pairs.iter().max().unwrap().clone(),
-        }
+        let (lower, upper) = self.min_max(rhs, |a, b| a.idiv(b));
+        Interval { lower, upper }
     }
 }
 
@@ -231,11 +234,8 @@ impl Mul for &Interval {
             let b = self.upper.mul(&rhs.lower);
             return Interval::ordered(a, b);
         }
-        let pairs = self.cartesian(rhs, |a, b| a * b);
-        Interval {
-            lower: pairs.iter().min().unwrap().clone(),
-            upper: pairs.iter().max().unwrap().clone(),
-        }
+        let (lower, upper) = self.min_max(rhs, |a, b| a * b);
+        Interval { lower, upper }
     }
 }
 
@@ -265,11 +265,8 @@ impl Div for &Interval {
             let b = self.upper.div(&rhs.lower);
             return Interval::ordered(a, b);
         }
-        let pairs = self.cartesian(rhs, |a, b| a / b);
-        Interval {
-            lower: pairs.iter().min().unwrap().clone(),
-            upper: pairs.iter().max().unwrap().clone(),
-        }
+        let (lower, upper) = self.min_max(rhs, |a, b| a / b);
+        Interval { lower, upper }
     }
 }
 
@@ -357,15 +354,11 @@ impl Pow<&Interval> for &Interval {
         // "The Extended Real Interval System" by Walster (1970)
         if self.lower.is_positive() {
             // base is on the positive side
-            let pairs = self.cartesian(rhs, |a, b| a.pow(b));
-            Interval {
-                lower: pairs.iter().min().unwrap().clone(),
-                upper: pairs.iter().max().unwrap().clone(),
-            }
+            let (lower, upper) = self.min_max(rhs, |a, b| a.pow(b));
+            Interval { lower, upper }
         } else if self.upper.is_negative() {
             // base is on the negative side
-            let pairs = self.neg().cartesian(rhs, |a, b| a.pow(b));
-            let upper = pairs.iter().max().unwrap().clone();
+            let (_, upper) = self.neg().min_max(rhs, |a, b| a.pow(b));
             Interval {
                 lower: upper.neg(),
                 upper,
