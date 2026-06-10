@@ -127,9 +127,9 @@ it returns a vector of `count` random values.
 
 To run a script from a file use `load(path/to/script)`.
 
-`dbg` would print a debug log for given expression. `print(2 + 2 = {2+2})` would print "2 + 2 = 4"
-interpreting arguments (including whitespaces) as a string and the content of {} as an expression
-that is evaluated. Special characters can be escaped, for example `\n` is a newline, or `\{` and `\}`
+`print(2 + 2 = {2+2})` would print "2 + 2 = 4" interpreting arguments (including whitespaces)
+as a string and the content of {} as an expression that is evaluated. Special characters can
+be escaped, for example `\n` is a newline, or `\{` and `\}`
 are escaped curly brackets.
 
 `rat` can be used to transform floating-point number to an approximate rational representation, for example:

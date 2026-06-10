@@ -14,7 +14,7 @@ use std::{
     ops::{Add, Div, Mul, Neg, Rem, Sub},
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Number {
     Integer(BigInt),
     Rational(Ratio<BigInt>),
@@ -694,38 +694,6 @@ impl std::fmt::Display for Number {
             Float(n) => write_scaled!(f, n),
             Complex(n) => write_scaled!(f, n),
         }
-    }
-}
-
-impl std::fmt::Debug for Number {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Integer(n) => write!(f, "{}", n),
-            Rational(n) => write!(f, "{}", n),
-            Float(n) => {
-                if n.is_nan() || n.is_infinite() {
-                    write!(f, "{}", n)
-                } else {
-                    write!(f, "{}", f64_to_string(n.0))
-                }
-            }
-            Complex(n) => {
-                if n.is_nan() || n.is_infinite() {
-                    write!(f, "{}", n)
-                } else {
-                    write!(f, "{}+{}i", f64_to_string(n.re), f64_to_string(n.im))
-                }
-            }
-        }
-    }
-}
-
-fn f64_to_string(n: f64) -> String {
-    if let Some(r) = Ratio::from_float(n) {
-        format!("{}", r)
-    } else {
-        let (mantissa, exponent, sign) = n.integer_decode();
-        format!("{}*{}*2^{}", sign, mantissa, exponent)
     }
 }
 

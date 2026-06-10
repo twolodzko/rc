@@ -376,15 +376,6 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                 let val = eval(&exprs[0], memory, funs)?;
                 return Ok(val.map(|x| x.rat()));
             }
-            Apply(ref name, ref exprs) if name == "dbg" => {
-                let mut last = Algebra::NAN;
-                for expr in exprs {
-                    let val = eval(expr, memory.clone(), funs.clone())?;
-                    println!("# {:?} = {:?}", expr, val);
-                    last = val;
-                }
-                return Ok(last);
-            }
             // tail-call optimized
             Block(ref exprs) => {
                 let last = exprs.len() - 1;
