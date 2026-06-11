@@ -57,7 +57,7 @@ impl Number {
     pub const NEG_INFINITY: Number = Float(OrderedFloat(f64::NEG_INFINITY));
     pub const ZERO: Number = Integer(BigInt::ZERO);
 
-    impl_method!(sqrt cbrt ln log2 log10 exp sin cos tan asin acos atan tanh sinh cosh asinh acosh atanh);
+    impl_method!(cbrt ln log2 log10 exp sin cos tan asin acos atan tanh sinh cosh asinh acosh atanh);
     impl_libm!(erf erfc lgamma tgamma);
 
     pub fn is_zero(&self) -> bool {
@@ -126,6 +126,20 @@ impl Number {
             Rational(x) => Rational(x.abs()),
             Float(x) => Float(x.abs()),
             Complex(x) => Float(x.norm().into()),
+        }
+    }
+
+    pub fn sqrt(&self) -> Number {
+        if let Complex(n) = self {
+            Complex(n.sqrt())
+        } else if let Some(x) = self.to_f64() {
+            if x.is_sign_negative() {
+                Complex(num::Complex::from(x).sqrt())
+            } else {
+                Float(x.sqrt().into())
+            }
+        } else {
+            Number::NAN
         }
     }
 
@@ -555,7 +569,13 @@ impl Pow<&Number> for &Number {
             (_, Float(rhs)) if *rhs == 0.5 => self.sqrt(),
             _ => {
                 if let Some(x) = rhs.to_f64() {
-                    Float(self.powf(x).into())
+                    if self.is_negative() {
+                        self.to_complex()
+                            .map(|c| Complex(c.powf(x)))
+                            .unwrap_or(Number::NAN)
+                    } else {
+                        Float(self.powf(x).into())
+                    }
                 } else {
                     Number::NAN
                 }
