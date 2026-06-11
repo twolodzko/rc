@@ -687,6 +687,7 @@ impl std::fmt::Display for Number {
 /// Unify types of two numbers
 fn same_types<'a, 'b>(lhs: &'a Number, rhs: &'b Number) -> (Cow<'a, Number>, Cow<'b, Number>) {
     match (lhs, rhs) {
+        // cast to complex
         (Complex(_), _) => {
             let rhs = if let Some(rhs) = rhs.to_complex() {
                 Complex(rhs)
@@ -703,16 +704,20 @@ fn same_types<'a, 'b>(lhs: &'a Number, rhs: &'b Number) -> (Cow<'a, Number>, Cow
             };
             (Cow::Owned(lhs), Cow::Borrowed(rhs))
         }
+        // cast to floats
         (Float(_), _) => (Cow::Borrowed(lhs), Cow::Owned(rhs.cast_to_float())),
         (_, Float(_)) => (Cow::Owned(lhs.cast_to_float()), Cow::Borrowed(rhs)),
+        // cast to integers
         (Rational(x), Integer(_)) if x.is_integer() => {
             (Cow::Owned(Integer(x.to_integer())), Cow::Borrowed(rhs))
         }
         (Integer(_), Rational(x)) if x.is_integer() => {
             (Cow::Borrowed(lhs), Cow::Owned(Integer(x.to_integer())))
         }
+        // cast to rationals
         (Rational(_), _) => (Cow::Borrowed(lhs), Cow::Owned(rhs.cast_to_rational())),
         (_, Rational(_)) => (Cow::Owned(lhs.cast_to_rational()), Cow::Borrowed(rhs)),
+        // take as-is
         (_, _) => (Cow::Borrowed(lhs), Cow::Borrowed(rhs)),
     }
 }
