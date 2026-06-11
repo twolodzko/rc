@@ -116,6 +116,10 @@ impl Number {
         self.to_bigint().is_some_and(|x| x.is_even())
     }
 
+    pub fn is_complex(&self) -> bool {
+        matches!(self, Complex(_))
+    }
+
     pub fn abs(&self) -> Number {
         match self {
             Integer(x) => Integer(x.abs()),

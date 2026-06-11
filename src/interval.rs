@@ -38,12 +38,15 @@ impl Interval {
         if lhs.is_nan() || rhs.is_nan() || lhs > rhs {
             bail!("{} interval has invalid bounds", &this)
         }
+        if lhs.is_complex() || rhs.is_complex() {
+            bail!("complex numbers cannot be ordered, so cannot be interval")
+        }
         Ok(this)
     }
 
     /// Create interval a~b ensuring that a <= b
     pub fn ordered(lhs: Number, rhs: Number) -> Interval {
-        if lhs.is_nan() || rhs.is_nan() {
+        if lhs.is_nan() || rhs.is_nan() || lhs.is_complex() || rhs.is_complex() {
             return Interval::NAN;
         }
         if &lhs <= &rhs {
