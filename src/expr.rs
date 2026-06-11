@@ -5,6 +5,7 @@ use std::path::PathBuf;
 pub enum Expr {
     Value(Algebra),
     NewVec(Vec<Expr>),
+    VecGet(Box<Expr>, Vec<Expr>),
     Variable(String),
     Primitive(Method, Box<Expr>),
     BinaryOp {
@@ -99,6 +100,15 @@ impl std::fmt::Display for Expr {
                     .join(", ");
                 write!(f, "[{}]", values)
             }
+            VecGet(v, i) => write!(
+                f,
+                "{}[{}]",
+                v,
+                i.iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
             Variable(s) => write!(f, "{}", s),
             Primitive(m, e) => {
                 use self::Method::*;

@@ -14,7 +14,7 @@ fun _map(x, j, acc) {
    if j > len(x) then
       acc
    else
-      _map(x, j+1, push(acc, isqrt(x:j)))
+      _map(x, j+1, push(acc, isqrt(x[j])))
 }
 
 fun isqrt(n) {

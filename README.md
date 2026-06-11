@@ -38,9 +38,9 @@ Vectors can be compared to scalars, for example `[1,2,3] < 4` means
 _all the values are less than four_. The equality operator `=` checks
 for exact equality, so `1 = [1,1,1]` would be _false_.
 
-`:` operator extracts element from a vector. `[1,2,3]:2` extracts second
-element, `[1,2,3,4]:[3,4]` extracts the third and fourth elements, `[1,2,3,4,5]:2~5`
-the elements at indexes from 2 to 5.
+`[1,2,3][2]` extracts second element, `[1,2,3,4][3,4]` extracts the vector
+containing third and fourth elements, and `[1,2,3,4,5][2~5]` the elements
+at indexes from 2 to 5.
 
 `push(vec, v1, v2, ...)` creates a new vector by taking `vec`
 and pushing the `v1`, `v2`, etc values at its back.

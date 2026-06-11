@@ -28,7 +28,6 @@ operator    = _{
   | bit_and
   | at
   | is_in
-  | get
   | same_type
 }
 add         =  { "+" }
@@ -52,18 +51,19 @@ bit_and     =  { "&" }
 at          =  { "@" }
 interval    =  { "~" }
 is_in       = @{ "in" ~ !name_char }
-get         =  { ":" }
-term        = _{ (neg ~ !WHITESPACE)? ~ atom ~ fact? }
+term        = _{ (neg ~ !WHITESPACE)? ~ list_get ~ fact? }
 fact        = @{ "!" ~ !"=" }
 neg         =  { "-" }
-atom        = _{ print_fn | error_fn | apply | ifelse | name | value | abs | block | "(" ~ expression ~ ")" }
-abs         =  { "|" ~ expression ~ "|" }
+atom        = _{ print_fn | error_fn | apply | ifelse | name | value | abs | block | brackets }
+brackets    = !{ "(" ~ expression ~ ")" }
+list_get    = ${ atom ~ ( "[" ~ arguments ~ "]" )* }
+abs         = !{ "|" ~ expression ~ "|" }
 arguments   = !{ expression ~ ("," ~ expression)* }
 apply       = ${ name ~ "(" ~ arguments? ~ ")" }
 function    =  { "fun" ~ name ~ "(" ~ parameters? ~ ")" ~ expression }
 parameters  = !{ name ~ ("," ~ name)* }
-block       =  { "{" ~ (expression ~ ";"?)+ ~ "}" }
-ifelse      =  { "if" ~ expression ~ "then" ~ expression ~ "else" ~ expression }
+block       = !{ "{" ~ (expression ~ ";"?)+ ~ "}" }
+ifelse      = !{ "if" ~ expression ~ "then" ~ expression ~ "else" ~ expression }
 
 print_fn = ${ "print" ~ template }
 error_fn = ${ "error" ~ template }

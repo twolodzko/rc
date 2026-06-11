@@ -16,10 +16,6 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
         match expr {
             // values & variables
             Value(n) => return Ok(n),
-            NewVec(ref exprs) => {
-                let vals = eval_all(exprs, memory, funs)?;
-                return Ok(Algebra::Vector(vals.into()));
-            }
             Variable(ref n) => {
                 return memory
                     .borrow()
@@ -30,6 +26,17 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
             Primitive(m, ref e) => {
                 let val = eval(e, memory, funs)?;
                 return val.primitive(m);
+            }
+            NewVec(ref exprs) => {
+                let vals = eval_all(exprs, memory, funs)?;
+                return Ok(Algebra::Vector(vals.into()));
+            }
+            VecGet(ref vec, ref index) => {
+                if let Algebra::Vector(vec) = &eval(vec, memory.clone(), funs.clone())? {
+                    let index = eval_all(index, memory, funs)?;
+                    return extract(vec, &index);
+                }
+                bail!("{} cannot be indexed", vec)
             }
             // operations
             BinaryOp {
@@ -176,17 +183,6 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                     }
                     _ => bail!("{} can be applied only to vectors", op),
                 }
-            }
-            BinaryOp {
-                ref lhs,
-                op: Op::Get,
-                ref rhs,
-            } => {
-                if let Algebra::Vector(vec) = &eval(lhs, memory.clone(), funs.clone())? {
-                    let index = &eval(rhs, memory, funs)?;
-                    return extract(vec, index);
-                }
-                bail!("{} cannot be indexed", lhs)
             }
             BinaryOp {
                 ref lhs,
@@ -487,42 +483,52 @@ fn eval_to_number(expr: &Expr, memory: Memory, funs: Functions) -> Result<Number
     }
 }
 
-fn extract(vector: &vector::Vector, index: &Algebra) -> Result<Algebra> {
+fn extract(vector: &vector::Vector, index: &[Algebra]) -> Result<Algebra> {
     use Algebra::*;
-    match index {
-        Number(index) => {
-            if let Some(index) = index.to_usize()
-                && index >= 1
+    let mut acc = Vec::new();
+    let asking_for_many = index.len() > 1 || index.first().is_some_and(|i| !matches!(i, Number(_)));
+    for i in index {
+        match i {
+            Number(index)
+                if let Some(index) = index.to_usize()
+                    && index >= 1 =>
             {
-                return Ok(vector.0.get(index - 1).cloned().unwrap_or(Algebra::NAN));
-            }
-        }
-        Interval(range) => {
-            if let Some(lower) = range.lower.to_usize()
-                && let Some(upper) = range.upper.to_usize()
-                && lower >= 1
-            {
-                let vec = vector.0[lower - 1..upper.min(vector.len())].to_vec();
-                return Ok(Vector(vec.into()));
-            }
-        }
-        Vector(indexes) => {
-            let mut acc = Vec::new();
-            for i in &indexes.0 {
-                if let Number(i) = i
-                    && let Some(i) = i.to_usize()
-                    && i >= 1
-                {
-                    let val = vector.0.get(i - 1).cloned().unwrap_or(Algebra::NAN);
+                if let Some(val) = vector.0.get(index - 1).cloned() {
                     acc.push(val);
-                } else {
-                    bail!("{} is not a valid index", index)
                 }
             }
-            return Ok(Vector(acc.into()));
+            Interval(range)
+                if let Some(lower) = range.lower.to_usize()
+                    && let Some(upper) = range.upper.to_usize()
+                    && lower >= 1 =>
+            {
+                if !vector.is_empty() {
+                    let mut vec = vector.0[lower - 1..upper.min(vector.len())].to_vec();
+                    acc.append(&mut vec);
+                }
+            }
+            Vector(indexes) => {
+                for j in &indexes.0 {
+                    if let Number(j) = j
+                        && let Some(j) = j.to_usize()
+                        && j >= 1
+                    {
+                        if let Some(val) = vector.0.get(j - 1).cloned() {
+                            acc.push(val);
+                        }
+                    } else {
+                        bail!("{} is not a valid index", j)
+                    }
+                }
+            }
+            _ => bail!("{} is not a valid index", i),
         }
     }
-    bail!("{} is not a valid index", index)
+    if asking_for_many {
+        Ok(Algebra::Vector(acc.into()))
+    } else {
+        Ok(acc.pop().unwrap_or(Algebra::NAN))
+    }
 }
 
 fn eval_template(

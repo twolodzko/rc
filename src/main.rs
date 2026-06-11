@@ -28,8 +28,6 @@ The <s>and</s> and <s>or</s> operators would treat NaN and assertion errors as f
 
 Interval specific: <s>~</s> (create interval), <s>&</s> (intersection of intervals), <s>|</s> (interval hull).
 
-The <s>:</s> operator is used to extract a value from vector (left-hand-side) at the index (right-hand-side). The index could be a positive integer, vector of integers, or an interval (indexes from~to, inclusive). <s>@</s> calculates a dot product of two vectors.
-
 <s><u>Primitives:</u></s>
 
 Trigonometric functions: <s>acos</s>, <s>acosh</s>, <s>asin</s>, <s>asinh</s>, <s>atan</s>, <s>atanh</s>, <s>cos</s>, <s>cosh</s>, <s>sin</s>, <s>sinh</s>, <s>tan</s>, <s>tanh</s>.
@@ -45,6 +43,8 @@ Type conversions: <s>int</s> (convert to integer), <s>float</s> (convert to floa
 <s>rand(len)</s> creates a vector or random values in the [0, 1) range. Without the len parameter, return a single value.
 
 <s>print(2 + 2 = {2+2})</s> would print "2 + 2 = 4" interpreting arguments (including whitespaces) as a string and the content of {} as an expression that is evaluated. Special characters can be escaped, for example \n is a newline, or \{ and \} are escaped curly brackets.
+
+<s>[1,2,3][2]</s> extracts second element from the vector, <s>[1,2,3,4][3,4]</s> extracts the vector containing third and fourth elements, and <s>[1,2,3,4,5][2~5]</s> the elements at indexes from 2 to 5.
 
 <s><u>Custom functions</u></s>
 

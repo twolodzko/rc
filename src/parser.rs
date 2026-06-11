@@ -28,7 +28,6 @@ static PRATT_PARSER: LazyLock<PrattParser<Rule>> = LazyLock::new(|| {
         .op(Op::infix(eq, Left) | Op::infix(ne, Left)) // = !=
         .op(Op::infix(lt, Left) | Op::infix(le, Left) | Op::infix(gt, Left) | Op::infix(ge, Left)) // < <= > >=
         .op(Op::infix(is_in, Left)) // in
-        .op(Op::infix(get, Left)) // :
         .op(Op::infix(add, Left) | Op::infix(sub, Left)) // + -
         .op(Op::infix(mul, Left)
             | Op::infix(idiv, Left)
@@ -93,139 +92,7 @@ fn parse_var(pair: Pair<Rule>) -> String {
 
 fn parse_expr(pairs: Pairs<Rule>) -> Result<Expr> {
     PRATT_PARSER
-        .map_primary(|primary| match primary.as_rule() {
-            Rule::apply => {
-                let mut inner = primary.into_inner();
-                let name = parse_var(inner.next().unwrap());
-                let mut args = Vec::new();
-                if let Some(inner) = inner.next() {
-                    args = parse_args(inner)?;
-                }
-
-                let method = match name.as_str() {
-                    "abs" => Method::Abs,
-                    "acos" => Method::Acos,
-                    "acosh" => Method::Acosh,
-                    "asin" => Method::Asin,
-                    "asinh" => Method::Asinh,
-                    "atan" => Method::Atan,
-                    "atanh" => Method::Atanh,
-                    "cbrt" => Method::Cbrt,
-                    "ceil" => Method::Ceil,
-                    "cos" => Method::Cos,
-                    "cosh" => Method::Cosh,
-                    "erf" => Method::Erf,
-                    "erfc" => Method::Erfc,
-                    "exp" => Method::Exp,
-                    "floor" => Method::Floor,
-                    "factorial" => Method::Fact,
-                    "gamma" => Method::Gamma,
-                    "lgamma" => Method::Lgamma,
-                    "ln" | "log" => Method::Ln,
-                    "log10" => Method::Log10,
-                    "log2" => Method::Log2,
-                    "round" => Method::Round,
-                    "sin" => Method::Sin,
-                    "sinh" => Method::Sinh,
-                    "sqrt" => Method::Sqrt,
-                    "tan" => Method::Tan,
-                    "tanh" => Method::Tanh,
-                    _ => return Ok(Expr::Apply(name, args)),
-                };
-                if args.len() != 1 {
-                    bail!(ArityError {
-                        name,
-                        arity: 1,
-                        count: args.len()
-                    });
-                }
-                Ok(Expr::Primitive(method, Box::new(args[0].clone())))
-            }
-            Rule::block => {
-                let mut acc = Vec::new();
-                let inner = primary.into_inner();
-                for pair in inner {
-                    let expr = parse_expr(pair.into_inner())?;
-                    acc.push(expr);
-                }
-                if acc.len() == 1 {
-                    Ok(acc.pop().unwrap())
-                } else {
-                    Ok(Expr::Block(acc))
-                }
-            }
-            Rule::abs => {
-                let inner = primary.into_inner();
-                let expr = parse_expr(inner)?;
-                Ok(Expr::Primitive(Method::Abs, Box::new(expr)))
-            }
-            Rule::expression => parse_expr(primary.into_inner()),
-            Rule::term => parse_expr(primary.into_inner()),
-            Rule::name => {
-                let expr = match primary.as_str().to_lowercase().as_str() {
-                    "pi" => {
-                        Expr::Value(Algebra::Number(Number::Float(std::f64::consts::PI.into())))
-                    }
-                    "e" => Expr::Value(Algebra::Number(Number::Float(std::f64::consts::E.into()))),
-                    "i" => Expr::Value(Algebra::Number(Number::Complex(num::complex::Complex::I))),
-                    "epsilon" => Expr::Value(Algebra::Number(Number::Float(f64::EPSILON.into()))),
-                    "nan" => Expr::Value(Algebra::Number(Number::NAN)),
-                    "inf" => Expr::Value(Algebra::Number(Number::INFINITY)),
-                    _ => Expr::Variable(primary.to_string()),
-                };
-                Ok(expr)
-            }
-            Rule::float => {
-                let s = primary.as_str();
-                let number = if let Ok(value) = BigInt::from_str(s) {
-                    Expr::Value(Algebra::Number(Number::Integer(value)))
-                } else if let Ok(value) = f64::from_str(s) {
-                    Expr::Value(Algebra::Number(Number::Float(value.into())))
-                } else {
-                    Expr::Value(Algebra::Number(Number::NAN))
-                };
-                Ok(number)
-            }
-            Rule::complex => {
-                let mut inner = primary.into_inner();
-                let first = inner.next().unwrap();
-                let mut real = 0f64;
-                let imag = if first.as_rule() == Rule::imaginary {
-                    parse_imag(first)?
-                } else {
-                    real = f64::from_str(first.as_str())?;
-                    parse_imag(inner.next().unwrap())?
-                };
-                Ok(Expr::Value(Algebra::Number(Number::Complex(Complex::new(
-                    real, imag,
-                )))))
-            }
-            Rule::vector => {
-                let mut acc = Vec::new();
-                if let Some(inner) = primary.into_inner().next() {
-                    acc = parse_args(inner)?;
-                }
-                Ok(Expr::NewVec(acc))
-            }
-            Rule::ifelse => {
-                let mut inner = primary.into_inner();
-                let cond = parse_expr(inner.next().unwrap().into_inner())?;
-                let yes = parse_expr(inner.next().unwrap().into_inner())?;
-                let no = parse_expr(inner.next().unwrap().into_inner())?;
-                Ok(Expr::IfElse(Box::new(cond), Box::new(yes), Box::new(no)))
-            }
-            Rule::print_fn => {
-                let inner = primary.into_inner().next().unwrap().into_inner();
-                let acc = parse_template(inner)?;
-                Ok(Expr::Print(acc))
-            }
-            Rule::error_fn => {
-                let inner = primary.into_inner().next().unwrap().into_inner();
-                let acc = parse_template(inner)?;
-                Ok(Expr::Error(acc))
-            }
-            rule => bail!("unexpected {:?}", rule),
-        })
+        .map_primary(parse_primary)
         .map_infix(|lhs, op, rhs| {
             let op = match op.as_rule() {
                 Rule::add => Op::Add,
@@ -235,7 +102,6 @@ fn parse_expr(pairs: Pairs<Rule>) -> Result<Expr> {
                 Rule::div => Op::Div,
                 Rule::eq => Op::Eq,
                 Rule::ge => Op::Ge,
-                Rule::get => Op::Get,
                 Rule::gt => Op::Gt,
                 Rule::idiv => Op::Idiv,
                 Rule::interval => Op::Interval,
@@ -274,6 +140,154 @@ fn parse_expr(pairs: Pairs<Rule>) -> Result<Expr> {
             _ => unreachable!(),
         })
         .parse(pairs)
+}
+
+fn parse_primary(primary: Pair<'_, Rule>) -> Result<Expr> {
+    match primary.as_rule() {
+        Rule::expression | Rule::brackets => parse_expr(primary.into_inner()),
+        Rule::apply => {
+            let mut inner = primary.into_inner();
+            let name = parse_var(inner.next().unwrap());
+            let mut args = Vec::new();
+            if let Some(inner) = inner.next() {
+                args = parse_args(inner)?;
+            }
+
+            let method = match name.as_str() {
+                "abs" => Method::Abs,
+                "acos" => Method::Acos,
+                "acosh" => Method::Acosh,
+                "asin" => Method::Asin,
+                "asinh" => Method::Asinh,
+                "atan" => Method::Atan,
+                "atanh" => Method::Atanh,
+                "cbrt" => Method::Cbrt,
+                "ceil" => Method::Ceil,
+                "cos" => Method::Cos,
+                "cosh" => Method::Cosh,
+                "erf" => Method::Erf,
+                "erfc" => Method::Erfc,
+                "exp" => Method::Exp,
+                "floor" => Method::Floor,
+                "factorial" => Method::Fact,
+                "gamma" => Method::Gamma,
+                "lgamma" => Method::Lgamma,
+                "ln" | "log" => Method::Ln,
+                "log10" => Method::Log10,
+                "log2" => Method::Log2,
+                "round" => Method::Round,
+                "sin" => Method::Sin,
+                "sinh" => Method::Sinh,
+                "sqrt" => Method::Sqrt,
+                "tan" => Method::Tan,
+                "tanh" => Method::Tanh,
+                _ => return Ok(Expr::Apply(name, args)),
+            };
+            if args.len() != 1 {
+                bail!(ArityError {
+                    name,
+                    arity: 1,
+                    count: args.len()
+                });
+            }
+            Ok(Expr::Primitive(method, Box::new(args[0].clone())))
+        }
+        Rule::block => {
+            let mut acc = Vec::new();
+            let inner = primary.into_inner();
+            for pair in inner {
+                let expr = parse_expr(pair.into_inner())?;
+                acc.push(expr);
+            }
+            if acc.len() == 1 {
+                Ok(acc.pop().unwrap())
+            } else {
+                Ok(Expr::Block(acc))
+            }
+        }
+        Rule::abs => {
+            let inner = primary.into_inner();
+            let expr = parse_expr(inner)?;
+            Ok(Expr::Primitive(Method::Abs, Box::new(expr)))
+        }
+        Rule::term => parse_expr(primary.into_inner()),
+        Rule::name => {
+            let expr = match primary.as_str().to_lowercase().as_str() {
+                "pi" => Expr::Value(Algebra::Number(Number::Float(std::f64::consts::PI.into()))),
+                "e" => Expr::Value(Algebra::Number(Number::Float(std::f64::consts::E.into()))),
+                "i" => Expr::Value(Algebra::Number(Number::Complex(num::complex::Complex::I))),
+                "epsilon" => Expr::Value(Algebra::Number(Number::Float(f64::EPSILON.into()))),
+                "nan" => Expr::Value(Algebra::Number(Number::NAN)),
+                "inf" => Expr::Value(Algebra::Number(Number::INFINITY)),
+                _ => Expr::Variable(primary.to_string()),
+            };
+            Ok(expr)
+        }
+        Rule::float => {
+            let s = primary.as_str();
+            let number = if let Ok(value) = BigInt::from_str(s) {
+                Expr::Value(Algebra::Number(Number::Integer(value)))
+            } else if let Ok(value) = f64::from_str(s) {
+                Expr::Value(Algebra::Number(Number::Float(value.into())))
+            } else {
+                Expr::Value(Algebra::Number(Number::NAN))
+            };
+            Ok(number)
+        }
+        Rule::complex => {
+            let mut inner = primary.into_inner();
+            let first = inner.next().unwrap();
+            let mut real = 0f64;
+            let imag = if first.as_rule() == Rule::imaginary {
+                parse_imag(first)?
+            } else {
+                real = f64::from_str(first.as_str())?;
+                parse_imag(inner.next().unwrap())?
+            };
+            Ok(Expr::Value(Algebra::Number(Number::Complex(Complex::new(
+                real, imag,
+            )))))
+        }
+        Rule::vector => {
+            let mut acc = Vec::new();
+            if let Some(inner) = primary.into_inner().next() {
+                acc = parse_args(inner)?;
+            }
+            Ok(Expr::NewVec(acc))
+        }
+        Rule::ifelse => {
+            let mut inner = primary.into_inner();
+            let cond = parse_expr(inner.next().unwrap().into_inner())?;
+            let yes = parse_expr(inner.next().unwrap().into_inner())?;
+            let no = parse_expr(inner.next().unwrap().into_inner())?;
+            Ok(Expr::IfElse(Box::new(cond), Box::new(yes), Box::new(no)))
+        }
+        Rule::list_get => {
+            let mut inner = primary.into_inner();
+            let mut expr = parse_primary(inner.next().unwrap())?;
+            for next in inner {
+                debug_assert_eq!(next.as_rule(), Rule::arguments);
+                let mut acc = Vec::new();
+                for pair in next.into_inner() {
+                    let index = parse_primary(pair)?;
+                    acc.push(index);
+                }
+                expr = Expr::VecGet(Box::new(expr), acc)
+            }
+            Ok(expr)
+        }
+        Rule::print_fn => {
+            let inner = primary.into_inner().next().unwrap().into_inner();
+            let acc = parse_template(inner)?;
+            Ok(Expr::Print(acc))
+        }
+        Rule::error_fn => {
+            let inner = primary.into_inner().next().unwrap().into_inner();
+            let acc = parse_template(inner)?;
+            Ok(Expr::Error(acc))
+        }
+        rule => bail!("unexpected {:?}", rule),
+    }
 }
 
 fn parse_args(primary: Pair<'_, Rule>) -> Result<Vec<Expr>> {
