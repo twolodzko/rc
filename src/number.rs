@@ -438,6 +438,7 @@ fn to_rat(f: f64) -> Number {
     let base = Ratio::from_integer(BigInt::from(2));
     Rational(sign * mantissa * base.pow(exponent as i32))
 }
+
 macro_rules! op {
     ( $lhs:tt, $method:tt, $rhs:tt ) => {{
         match (&$lhs, &$rhs) {
@@ -566,10 +567,8 @@ impl Pow<&Number> for &Number {
 
 /// Compute x^(1/n)
 fn nth_root(x: Number, n: &BigInt) -> f64 {
-    if x.is_nan() || (x.is_negative() && n.is_even()) {
-        // https://math.stackexchange.com/a/1608619
-        f64::NAN
-    } else if let Some(x) = x.to_f64() {
+    // https://math.stackexchange.com/a/1608619
+    if let Some(x) = x.to_f64() {
         if n == &BigInt::from(2) {
             x.sqrt()
         } else if n == &BigInt::from(3) {
