@@ -111,12 +111,6 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
 
                 let lhs = eval(lhs, memory.clone(), funs.clone())?;
                 let rhs = eval(rhs, memory, funs)?;
-                if lhs.is_nan() {
-                    return Ok(lhs);
-                }
-                if rhs.is_nan() {
-                    return Ok(rhs);
-                }
                 if lhs == rhs {
                     return Ok(rhs);
                 } else {
@@ -125,21 +119,28 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
             }
             BinaryOp {
                 ref lhs,
-                op: op @ (Op::Ne | Op::Lt | Op::Le | Op::Gt | Op::Ge),
+                op: Op::Ne,
                 ref rhs,
             } => {
                 let lhs = eval(lhs, memory.clone(), funs.clone())?;
                 let rhs = eval(rhs, memory, funs)?;
-                if lhs.is_nan() {
-                    return Ok(lhs);
-                }
-                if rhs.is_nan() {
+                if lhs != rhs {
                     return Ok(rhs);
-                }
-                return if lhs.compare(op, &rhs) {
-                    Ok(rhs)
                 } else {
                     bail!(AssertionError(expr))
+                };
+            }
+            BinaryOp {
+                ref lhs,
+                op: op @ (Op::Lt | Op::Le | Op::Gt | Op::Ge),
+                ref rhs,
+            } => {
+                let lhs = eval(lhs, memory.clone(), funs.clone())?;
+                let rhs = eval(rhs, memory, funs)?;
+                if lhs.is_nan() ^ rhs.is_nan() || !lhs.compare(op, &rhs) {
+                    bail!(AssertionError(expr))
+                } else {
+                    return Ok(rhs);
                 };
             }
             BinaryOp {
