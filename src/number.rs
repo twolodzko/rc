@@ -192,12 +192,7 @@ impl Number {
                 };
                 Integer(i)
             }
-            Complex(x) => {
-                let Some(i) = x.to_f64().unwrap_or(f64::NAN).floor().to_bigint() else {
-                    return Number::NAN;
-                };
-                Integer(i)
-            }
+            Complex(x) => Complex(num::Complex::new(x.re.floor(), x.im.floor())),
         }
     }
 
@@ -211,12 +206,7 @@ impl Number {
                 };
                 Integer(i)
             }
-            Complex(x) => {
-                let Some(i) = x.to_f64().unwrap_or(f64::NAN).ceil().to_bigint() else {
-                    return Number::NAN;
-                };
-                Integer(i)
-            }
+            Complex(x) => Complex(num::Complex::new(x.re.ceil(), x.im.ceil())),
         }
     }
 
@@ -230,12 +220,7 @@ impl Number {
                 };
                 Integer(i)
             }
-            Complex(x) => {
-                let Some(i) = x.to_f64().unwrap_or(f64::NAN).round().to_bigint() else {
-                    return Number::NAN;
-                };
-                Integer(i)
-            }
+            Complex(x) => Complex(num::Complex::new(x.re.round(), x.im.round())),
         }
     }
 
@@ -249,12 +234,7 @@ impl Number {
                 };
                 Integer(i)
             }
-            Complex(x) => {
-                let Some(i) = x.to_f64().unwrap_or(f64::NAN).trunc().to_bigint() else {
-                    return Number::NAN;
-                };
-                Integer(i)
-            }
+            Complex(x) => Complex(num::Complex::new(x.re.trunc(), x.im.trunc())),
         }
     }
 
@@ -417,9 +397,9 @@ impl Number {
 
     pub fn to_complex(&self) -> Option<Complex<f64>> {
         match self {
-            Integer(x) => Some(Complex::new(x.to_f64()?, 0f64)),
-            Rational(x) => Some(Complex::new(x.to_f64()?, 0f64)),
-            Float(x) => Some(Complex::new(x.into_inner(), 0f64)),
+            Integer(x) => Some(Complex::from(x.to_f64()?)),
+            Rational(x) => Some(Complex::from(x.to_f64()?)),
+            Float(x) => Some(Complex::from(x.into_inner())),
             Complex(x) => Some(*x),
         }
     }
@@ -704,8 +684,6 @@ impl std::fmt::Display for Number {
 /// Unify types of two numbers
 fn same_types<'a, 'b>(lhs: &'a Number, rhs: &'b Number) -> (Cow<'a, Number>, Cow<'b, Number>) {
     match (lhs, rhs) {
-        (Float(_), _) => (Cow::Borrowed(lhs), Cow::Owned(rhs.cast_to_float())),
-        (_, Float(_)) => (Cow::Owned(lhs.cast_to_float()), Cow::Borrowed(rhs)),
         (Complex(_), _) => {
             let rhs = if let Some(rhs) = rhs.to_complex() {
                 Complex(rhs)
@@ -722,6 +700,8 @@ fn same_types<'a, 'b>(lhs: &'a Number, rhs: &'b Number) -> (Cow<'a, Number>, Cow
             };
             (Cow::Owned(lhs), Cow::Borrowed(rhs))
         }
+        (Float(_), _) => (Cow::Borrowed(lhs), Cow::Owned(rhs.cast_to_float())),
+        (_, Float(_)) => (Cow::Owned(lhs.cast_to_float()), Cow::Borrowed(rhs)),
         (Rational(x), Integer(_)) if x.is_integer() => {
             (Cow::Owned(Integer(x.to_integer())), Cow::Borrowed(rhs))
         }

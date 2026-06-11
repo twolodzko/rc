@@ -39,7 +39,7 @@ impl Interval {
             bail!("{} interval has invalid bounds", &this)
         }
         if lhs.is_complex() || rhs.is_complex() {
-            bail!("complex numbers cannot be ordered, so cannot be interval")
+            bail!("bounds of an interval cannot be complex")
         }
         Ok(this)
     }
