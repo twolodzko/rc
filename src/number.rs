@@ -688,19 +688,11 @@ fn same_types<'a, 'b>(lhs: &'a Number, rhs: &'b Number) -> (Cow<'a, Number>, Cow
     match (lhs, rhs) {
         // cast to complex
         (Complex(_), _) => {
-            let rhs = if let Some(rhs) = rhs.to_complex() {
-                Complex(rhs)
-            } else {
-                Number::NAN
-            };
+            let rhs = rhs.to_complex().map(Complex).unwrap_or(Number::NAN);
             (Cow::Borrowed(lhs), Cow::Owned(rhs))
         }
         (_, Complex(_)) => {
-            let lhs = if let Some(lhs) = lhs.to_complex() {
-                Complex(lhs)
-            } else {
-                Number::NAN
-            };
+            let lhs = lhs.to_complex().map(Complex).unwrap_or(Number::NAN);
             (Cow::Owned(lhs), Cow::Borrowed(rhs))
         }
         // cast to floats
