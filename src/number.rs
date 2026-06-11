@@ -566,16 +566,19 @@ impl Pow<&Number> for &Number {
 
 /// Compute x^(1/n)
 fn nth_root(x: Number, n: &BigInt) -> f64 {
-    if x.is_nan() {
+    if x.is_nan() || (x.is_negative() && n.is_even()) {
+        // https://math.stackexchange.com/a/1608619
         f64::NAN
-    } else if !x.is_negative() && n == &BigInt::from(2) {
-        x.to_f64().unwrap_or(f64::NAN).sqrt()
-    } else if n == &BigInt::from(3) {
-        x.to_f64().unwrap_or(f64::NAN).cbrt()
+    } else if let Some(x) = x.to_f64() {
+        if n == &BigInt::from(2) {
+            x.sqrt()
+        } else if n == &BigInt::from(3) {
+            x.cbrt()
+        } else {
+            n.to_f64().map(|n| x.powf(n.inv())).unwrap_or(f64::NAN)
+        }
     } else {
-        let exp = n.to_f64().unwrap_or(f64::NAN).inv();
-        let r = x.abs().powf(exp);
-        if x.is_negative() && n.is_odd() { -r } else { r }
+        f64::NAN
     }
 }
 
