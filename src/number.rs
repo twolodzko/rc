@@ -424,6 +424,34 @@ impl Number {
             Complex(x) => x.to_usize(),
         }
     }
+
+    /// Compute x^(1/n)
+    fn nth_root(&self, n: &BigInt) -> Number {
+        // https://math.stackexchange.com/a/1608619
+        if let Complex(x) = self {
+            if n == &BigInt::from(2) {
+                x.sqrt().into()
+            } else if n == &BigInt::from(3) {
+                x.cbrt().into()
+            } else if let Some(n) = n.to_f64() {
+                x.powf(n.inv()).into()
+            } else {
+                Number::NAN
+            }
+        } else if let Some(x) = self.to_f64() {
+            if n == &BigInt::from(2) {
+                x.sqrt().into()
+            } else if n == &BigInt::from(3) {
+                x.cbrt().into()
+            } else if let Some(n) = n.to_f64() {
+                x.powf(n.inv()).into()
+            } else {
+                Number::NAN
+            }
+        } else {
+            Number::NAN
+        }
+    }
 }
 
 /// Return rational approximation of a float or NaN if not possible
@@ -542,11 +570,13 @@ impl Pow<&Number> for &Number {
                 let m = p.numer();
                 let n = p.denom();
                 let xm = self.powi(m);
-                if xm.is_complex() || (xm.is_negative() && n.is_even()) {
-                    complex_nth_root(xm, n).into()
-                } else {
-                    f64_nth_root(xm, n).into()
+                if xm.is_negative() && n.is_even() {
+                    return xm
+                        .to_complex()
+                        .map(|xm| Complex(xm).nth_root(n))
+                        .unwrap_or(Number::NAN);
                 }
+                xm.nth_root(n)
             }
             // complex powers
             (Complex(x), Float(p)) => x.powf(p.0).into(),
@@ -562,46 +592,6 @@ impl Pow<&Number> for &Number {
             (_, Float(rhs)) if *rhs == 0.5 => self.sqrt(),
             _ => rhs.to_f64().map(|x| self.powf(x)).unwrap_or(Number::NAN),
         }
-    }
-}
-
-/// Compute x^(1/n)
-fn f64_nth_root(x: Number, n: &BigInt) -> f64 {
-    // https://math.stackexchange.com/a/1608619
-    if let Some(x) = x.to_f64() {
-        if n == &BigInt::from(2) {
-            x.sqrt()
-        } else if n == &BigInt::from(3) {
-            x.cbrt()
-        } else if let Some(n) = n.to_i32() {
-            x.powi(n)
-        } else if let Some(n) = n.to_f64() {
-            x.powf(n)
-        } else {
-            f64::NAN
-        }
-    } else {
-        f64::NAN
-    }
-}
-
-/// Compute x^(1/n) for negative x
-fn complex_nth_root(x: Number, n: &BigInt) -> num::Complex<f64> {
-    // https://math.stackexchange.com/a/1608619
-    if let Some(x) = x.to_complex() {
-        if n == &BigInt::from(2) {
-            x.sqrt()
-        } else if n == &BigInt::from(3) {
-            x.cbrt()
-        } else if let Some(n) = n.to_i32() {
-            x.powi(n)
-        } else if let Some(n) = n.to_f64() {
-            x.powf(n)
-        } else {
-            f64::NAN.into()
-        }
-    } else {
-        f64::NAN.into()
     }
 }
 
