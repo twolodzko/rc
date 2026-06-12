@@ -144,11 +144,15 @@ impl Number {
         }
     }
 
-    fn powf(&self, rhs: f64) -> f64 {
-        if let Some(x) = self.to_f64() {
-            x.powf(rhs)
+    fn powf(&self, rhs: f64) -> Number {
+        if self.is_negative() {
+            self.to_complex()
+                .map(|c| Complex(c.powf(rhs)))
+                .unwrap_or(Number::NAN)
+        } else if let Some(x) = self.to_f64() {
+            Float(x.powf(rhs).into())
         } else {
-            f64::NAN
+            Number::NAN
         }
     }
 
@@ -162,7 +166,7 @@ impl Number {
                         Integer(x.pow(n))
                     }
                 } else if let Some(rhs) = rhs.to_f64() {
-                    Float(self.powf(rhs).into())
+                    self.powf(rhs)
                 } else {
                     Number::NAN
                 }
@@ -171,7 +175,7 @@ impl Number {
                 if let Ok(n) = TryInto::<i32>::try_into(rhs) {
                     Rational(x.pow(n))
                 } else if let Some(rhs) = rhs.to_f64() {
-                    Float(self.powf(rhs).into())
+                    self.powf(rhs)
                 } else {
                     Number::NAN
                 }
@@ -180,7 +184,7 @@ impl Number {
                 if let Ok(n) = TryInto::<i32>::try_into(rhs) {
                     Float(x.powi(n))
                 } else if let Some(rhs) = rhs.to_f64() {
-                    Float(self.powf(rhs).into())
+                    self.powf(rhs)
                 } else {
                     Number::NAN
                 }
@@ -551,13 +555,7 @@ impl Pow<&Number> for &Number {
             (_, Float(rhs)) if *rhs == 0.5 => self.sqrt(),
             _ => {
                 if let Some(x) = rhs.to_f64() {
-                    if self.is_negative() {
-                        self.to_complex()
-                            .map(|c| Complex(c.powf(x)))
-                            .unwrap_or(Number::NAN)
-                    } else {
-                        Float(self.powf(x).into())
-                    }
+                    self.powf(x)
                 } else {
                     Number::NAN
                 }
