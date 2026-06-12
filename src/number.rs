@@ -57,7 +57,7 @@ impl Number {
     pub const NEG_INFINITY: Number = Float(OrderedFloat(f64::NEG_INFINITY));
     pub const ZERO: Number = Integer(BigInt::ZERO);
 
-    impl_method!(cbrt ln log2 log10 exp sin cos tan asin acos atan tanh sinh cosh asinh acosh atanh);
+    impl_method!(sqrt cbrt ln log2 log10 exp sin cos tan asin acos atan tanh sinh cosh asinh acosh atanh);
     impl_libm!(erf erfc lgamma tgamma);
 
     pub fn is_zero(&self) -> bool {
@@ -127,20 +127,6 @@ impl Number {
             Rational(x) => Rational(x.abs()),
             Float(x) => Float(x.abs()),
             Complex(x) => x.norm().into(),
-        }
-    }
-
-    pub fn sqrt(&self) -> Number {
-        if let Complex(n) = self {
-            Complex(n.sqrt())
-        } else if let Some(x) = self.to_f64() {
-            if x.is_sign_negative() {
-                Complex(num::Complex::from(x).sqrt())
-            } else {
-                Float(x.sqrt().into())
-            }
-        } else {
-            Number::NAN
         }
     }
 
@@ -421,6 +407,34 @@ impl Number {
             Complex(x) => x.to_usize(),
         }
     }
+
+    /// Compute x^(1/n)
+    fn nth_root(&self, n: &BigInt) -> Number {
+        // https://math.stackexchange.com/a/1608619
+        if let Complex(x) = self {
+            if n == &BigInt::from(2) {
+                x.sqrt().into()
+            } else if n == &BigInt::from(3) {
+                x.cbrt().into()
+            } else if let Some(n) = n.to_f64() {
+                x.powf(n.inv()).into()
+            } else {
+                Number::NAN
+            }
+        } else if let Some(x) = self.to_f64() {
+            if n == &BigInt::from(2) {
+                x.sqrt().into()
+            } else if n == &BigInt::from(3) {
+                x.cbrt().into()
+            } else if let Some(n) = n.to_f64() {
+                x.powf(n.inv()).into()
+            } else {
+                Number::NAN
+            }
+        } else {
+            Number::NAN
+        }
+    }
 }
 
 /// Return rational approximation of a float or NaN if not possible
@@ -539,7 +553,7 @@ impl Pow<&Number> for &Number {
                 let m = p.numer();
                 let n = p.denom();
                 let xm = self.powi(m);
-                nth_root(xm, n).into()
+                xm.nth_root(n)
             }
             // complex powers
             (Complex(x), Float(p)) => x.powf(p.0).into(),
@@ -555,22 +569,6 @@ impl Pow<&Number> for &Number {
             (_, Float(rhs)) if *rhs == 0.5 => self.sqrt(),
             _ => rhs.to_f64().map(|x| self.powf(x)).unwrap_or(Number::NAN),
         }
-    }
-}
-
-/// Compute x^(1/n)
-fn nth_root(x: Number, n: &BigInt) -> f64 {
-    // https://math.stackexchange.com/a/1608619
-    if let Some(x) = x.to_f64() {
-        if n == &BigInt::from(2) {
-            x.sqrt()
-        } else if n == &BigInt::from(3) {
-            x.cbrt()
-        } else {
-            n.to_f64().map(|n| x.powf(n.inv())).unwrap_or(f64::NAN)
-        }
-    } else {
-        f64::NAN
     }
 }
 
