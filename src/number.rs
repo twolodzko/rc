@@ -412,28 +412,36 @@ impl Number {
     fn nth_root(&self, n: &BigInt) -> Number {
         // https://math.stackexchange.com/a/1608619
         if let Complex(x) = self {
-            if n == &BigInt::from(2) {
-                x.sqrt().into()
-            } else if n == &BigInt::from(3) {
-                x.cbrt().into()
-            } else if let Some(n) = n.to_f64() {
-                x.powf(n.inv()).into()
-            } else {
-                Number::NAN
-            }
+            complex_nth_root(x, n).into()
         } else if let Some(x) = self.to_f64() {
-            if n == &BigInt::from(2) {
-                x.sqrt().into()
-            } else if n == &BigInt::from(3) {
-                x.cbrt().into()
-            } else if let Some(n) = n.to_f64() {
-                x.powf(n.inv()).into()
-            } else {
-                Number::NAN
-            }
+            f64_nth_root(x, n).into()
         } else {
             Number::NAN
         }
+    }
+}
+
+fn complex_nth_root(x: &num::Complex<f64>, n: &BigInt) -> num::Complex<f64> {
+    if n == &BigInt::from(2) {
+        x.sqrt()
+    } else if n == &BigInt::from(3) {
+        x.cbrt()
+    } else if let Some(n) = n.to_f64() {
+        x.powf(n.inv())
+    } else {
+        f64::NAN.into()
+    }
+}
+
+fn f64_nth_root(x: f64, n: &BigInt) -> f64 {
+    if n == &BigInt::from(2) {
+        x.sqrt()
+    } else if n == &BigInt::from(3) {
+        x.cbrt()
+    } else if let Some(n) = n.to_f64() {
+        x.powf(n.inv())
+    } else {
+        f64::NAN
     }
 }
 
