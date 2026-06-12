@@ -9,7 +9,7 @@ use num::{
 };
 use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Interval {
     pub lower: Number,
     pub upper: Number,
@@ -39,7 +39,7 @@ impl Interval {
             bail!("{} interval has invalid bounds", &this)
         }
         if lhs.is_complex() || rhs.is_complex() {
-            bail!("complex numbers cannot be ordered, so cannot be interval")
+            bail!("bounds of an interval cannot be complex")
         }
         Ok(this)
     }
@@ -134,11 +134,7 @@ impl Interval {
     }
 
     /// Min-max algorithm applies function to all the pairs of the interval bounds and returns min and max of the results
-    pub fn min_max(
-        &self,
-        other: &Interval,
-        fun: fn(&Number, &Number) -> Number,
-    ) -> (Number, Number) {
+    fn min_max(&self, other: &Interval, fun: fn(&Number, &Number) -> Number) -> (Number, Number) {
         let cartesian = [
             fun(&self.lower, &other.lower),
             fun(&self.lower, &other.upper),
@@ -500,11 +496,5 @@ impl std::cmp::Ord for &Interval {
 impl std::fmt::Display for Interval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}{}{}", self.lower, Op::Interval, self.upper)
-    }
-}
-
-impl std::fmt::Debug for Interval {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?} {} {:?}", self.lower, Op::Interval, self.upper)
     }
 }

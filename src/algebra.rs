@@ -7,7 +7,7 @@ use anyhow::Result;
 use num::traits::Pow;
 use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum Algebra {
     Number(number::Number),
     Interval(interval::Interval),
@@ -321,16 +321,6 @@ impl std::fmt::Display for Algebra {
             Number(x) => write!(f, "{}", x),
             Interval(x) => write!(f, "{}", x),
             Vector(x) => write!(f, "{}", x),
-        }
-    }
-}
-
-impl std::fmt::Debug for Algebra {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Number(x) => write!(f, "{:?}", x),
-            Interval(x) => write!(f, "{:?}", x),
-            Vector(x) => write!(f, "{:?}", x),
         }
     }
 }
