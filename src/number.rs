@@ -438,6 +438,30 @@ impl Number {
     }
 }
 
+fn complex_nth_root(x: &num::Complex<f64>, n: &BigInt) -> num::Complex<f64> {
+    if n == &BigInt::from(2) {
+        x.sqrt()
+    } else if n == &BigInt::from(3) {
+        x.cbrt()
+    } else if let Some(n) = n.to_f64() {
+        x.powf(n.inv())
+    } else {
+        f64::NAN.into()
+    }
+}
+
+fn f64_nth_root(x: f64, n: &BigInt) -> f64 {
+    if n == &BigInt::from(2) {
+        x.sqrt()
+    } else if n == &BigInt::from(3) {
+        x.cbrt()
+    } else if let Some(n) = n.to_f64() {
+        x.powf(n.inv())
+    } else {
+        f64::NAN
+    }
+}
+
 /// Return rational approximation of a float or NaN if not possible
 fn to_rat(f: f64) -> Number {
     if f.is_nan() || f.is_infinite() {
@@ -589,13 +613,10 @@ impl Pow<&Number> for &Number {
             // complex powers
             (Complex(x), Float(p)) => x.powf(p.0).into(),
             (Complex(x), Complex(p)) => x.powc(*p).into(),
-            (_, Complex(p)) => {
-                if let Some(s) = self.to_complex() {
-                    s.powc(*p).into()
-                } else {
-                    Number::NAN
-                }
-            }
+            (_, Complex(p)) => self
+                .to_complex()
+                .map(|c| c.powc(*p).into())
+                .unwrap_or(Number::NAN),
             // float powers
             (_, Float(rhs)) if *rhs == 0.5 => self.sqrt(),
             _ => rhs.to_f64().map(|x| self.powf(x)).unwrap_or(Number::NAN),
