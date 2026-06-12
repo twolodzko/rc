@@ -2,7 +2,7 @@ use crate::{Algebra, expr::Method, number::Number};
 use anyhow::Result;
 use num::{BigInt, One};
 
-#[derive(Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Vector(pub Vec<Algebra>);
 
 impl Vector {
@@ -103,18 +103,6 @@ impl std::fmt::Display for Vector {
             .0
             .iter()
             .map(ToString::to_string)
-            .collect::<Vec<_>>()
-            .join(", ");
-        write!(f, "[{}]", vals)
-    }
-}
-
-impl std::fmt::Debug for Vector {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let vals = self
-            .0
-            .iter()
-            .map(|v| format!("{:?}", v))
             .collect::<Vec<_>>()
             .join(", ");
         write!(f, "[{}]", vals)
