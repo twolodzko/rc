@@ -280,7 +280,7 @@ impl Number {
     pub fn rat(&self) -> Number {
         match self {
             Integer(_) | Rational(_) => self.clone(),
-            Float(x) => to_rat(x.into_inner()),
+            Float(x) => to_rat(x.0),
             Complex(x) => to_rat(x.to_f64().unwrap_or(f64::NAN)),
         }
     }
@@ -370,7 +370,7 @@ impl Number {
         match self {
             Integer(x) => x.to_f64(),
             Rational(x) => x.to_f64(),
-            Float(x) => Some(x.into_inner()),
+            Float(x) => Some(x.0),
             Complex(x) => x.to_f64(),
         }
     }
@@ -379,7 +379,7 @@ impl Number {
         match self {
             Integer(x) => Some(Complex::from(x.to_f64()?)),
             Rational(x) => Some(Complex::from(x.to_f64()?)),
-            Float(x) => Some(Complex::from(x.into_inner())),
+            Float(x) => Some(Complex::from(x.0)),
             Complex(x) => Some(*x),
         }
     }
@@ -523,7 +523,7 @@ impl Pow<&Number> for &Number {
                 Float(nth_root(xm, n).into())
             }
             // complex powers
-            (Complex(x), Float(p)) => Complex(x.powf(p.into_inner())),
+            (Complex(x), Float(p)) => Complex(x.powf(p.0)),
             (Complex(x), Complex(p)) => Complex(x.powc(*p)),
             (_, Complex(p)) => {
                 if let Some(s) = self.to_complex() {
