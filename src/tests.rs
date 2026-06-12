@@ -176,6 +176,8 @@ use test_case::test_case;
 #[test_case("-|5| != |-5|", "5"; "absolute value operation order")]
 #[test_case("fun f(x) { x+2; _^2 }; f(2)", "16"; "using last value placeholder in functions")]
 #[test_case("{ x=1; y=x+2; y^2 } / 5", "9/5"; "simple block")]
+#[test_case("-4^(3/2)", "NaN"; "negative base to rational power")]
+#[test_case("sqrt(-4)", "NaN"; "sqrt of negative")]
 
 fn basic(input: &str, expexted: &str) {
     let (memory, funs) = init();
