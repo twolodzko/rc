@@ -39,6 +39,22 @@ macro_rules! impl_method {
     )*)
 }
 
+macro_rules! impl_complex_method {
+    ($($t:tt)*) => ($(
+        pub fn $t(&self) -> Number {
+            if let Complex(n) = self {
+                n.$t().into()
+            } else if self.is_negative() {
+                self.to_complex().map(|x| x.$t().into()).unwrap_or(Number::NAN)
+            } else if let Some(x) = self.to_f64() {
+                x.$t().into()
+            } else {
+                Number::NAN
+            }
+        }
+    )*)
+}
+
 macro_rules! impl_libm {
     ($($t:tt)*) => ($(
         pub fn $t(&self) -> Number {
@@ -57,7 +73,8 @@ impl Number {
     pub const NEG_INFINITY: Number = Float(OrderedFloat(f64::NEG_INFINITY));
     pub const ZERO: Number = Integer(BigInt::ZERO);
 
-    impl_method!(cbrt ln log2 log10 exp sin cos tan asin acos atan tanh sinh cosh asinh acosh atanh);
+    impl_method!(cbrt exp sin cos tan asin acos atan tanh sinh cosh asinh acosh atanh);
+    impl_complex_method!(sqrt ln log2 log10);
     impl_libm!(erf erfc lgamma tgamma);
 
     pub fn is_zero(&self) -> bool {
@@ -127,20 +144,6 @@ impl Number {
             Rational(x) => Rational(x.abs()),
             Float(x) => Float(x.abs()),
             Complex(x) => x.norm().into(),
-        }
-    }
-
-    pub fn sqrt(&self) -> Number {
-        if let Complex(n) = self {
-            Complex(n.sqrt())
-        } else if let Some(x) = self.to_f64() {
-            if x.is_sign_negative() {
-                Complex(num::Complex::from(x).sqrt())
-            } else {
-                Float(x.sqrt().into())
-            }
-        } else {
-            Number::NAN
         }
     }
 
@@ -539,7 +542,11 @@ impl Pow<&Number> for &Number {
                 let m = p.numer();
                 let n = p.denom();
                 let xm = self.powi(m);
-                nth_root(xm, n).into()
+                if xm.is_complex() || (xm.is_negative() && n.is_even()) {
+                    complex_nth_root(xm, n).into()
+                } else {
+                    f64_nth_root(xm, n).into()
+                }
             }
             // complex powers
             (Complex(x), Float(p)) => x.powf(p.0).into(),
@@ -559,18 +566,42 @@ impl Pow<&Number> for &Number {
 }
 
 /// Compute x^(1/n)
-fn nth_root(x: Number, n: &BigInt) -> f64 {
+fn f64_nth_root(x: Number, n: &BigInt) -> f64 {
     // https://math.stackexchange.com/a/1608619
     if let Some(x) = x.to_f64() {
         if n == &BigInt::from(2) {
             x.sqrt()
         } else if n == &BigInt::from(3) {
             x.cbrt()
+        } else if let Some(n) = n.to_i32() {
+            x.powi(n)
+        } else if let Some(n) = n.to_f64() {
+            x.powf(n)
         } else {
-            n.to_f64().map(|n| x.powf(n.inv())).unwrap_or(f64::NAN)
+            f64::NAN
         }
     } else {
         f64::NAN
+    }
+}
+
+/// Compute x^(1/n) for negative x
+fn complex_nth_root(x: Number, n: &BigInt) -> num::Complex<f64> {
+    // https://math.stackexchange.com/a/1608619
+    if let Some(x) = x.to_complex() {
+        if n == &BigInt::from(2) {
+            x.sqrt()
+        } else if n == &BigInt::from(3) {
+            x.cbrt()
+        } else if let Some(n) = n.to_i32() {
+            x.powi(n)
+        } else if let Some(n) = n.to_f64() {
+            x.powf(n)
+        } else {
+            f64::NAN.into()
+        }
+    } else {
+        f64::NAN.into()
     }
 }
 
