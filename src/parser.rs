@@ -1,5 +1,5 @@
 use crate::{
-    Algebra, ArityError, Template,
+    Algebra, ArityError, COMPLEX, Template,
     expr::{Expr, Function, Method, Op},
     number::Number,
 };
@@ -215,7 +215,9 @@ fn parse_primary(primary: Pair<'_, Rule>) -> Result<Expr> {
             let expr = match primary.as_str().to_lowercase().as_str() {
                 "pi" => Expr::Value(Algebra::Number(Number::Float(std::f64::consts::PI.into()))),
                 "e" => Expr::Value(Algebra::Number(Number::Float(std::f64::consts::E.into()))),
-                "i" => Expr::Value(Algebra::Number(Number::Complex(num::complex::Complex::I))),
+                "i" if unsafe { COMPLEX } => {
+                    Expr::Value(Algebra::Number(Number::Complex(num::complex::Complex::I)))
+                }
                 "epsilon" => Expr::Value(Algebra::Number(Number::Float(f64::EPSILON.into()))),
                 "nan" => Expr::Value(Algebra::Number(Number::NAN)),
                 "inf" => Expr::Value(Algebra::Number(Number::INFINITY)),
@@ -235,6 +237,12 @@ fn parse_primary(primary: Pair<'_, Rule>) -> Result<Expr> {
             Ok(number)
         }
         Rule::complex => {
+            if unsafe { !COMPLEX } {
+                bail!(
+                    "attempting to use complex number {} without --complex flag",
+                    primary.as_str()
+                )
+            }
             let mut inner = primary.into_inner();
             let first = inner.next().unwrap();
             let mut real = 0f64;

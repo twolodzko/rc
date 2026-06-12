@@ -10,7 +10,7 @@ types:
 * Arbitrary-precision integers represented by [`BigInt`][bigint].
 * Arbitrary-precision rational numbers represented by [`Ratio<BigInt>`][ratio].
 * 64-bit floating point numbers represented by [`OrderedFloat<f64>`][f64] in Rust.
-* Complex numbers represented by [`Complex<f64>`][complex].
+* Complex numbers represented by [`Complex<f64>`][complex] (when using --complex flag).
 
 In the case of operations on the numbers of different types, they are casted based
 on precedence: _integer < rational < float < complex_. Some operations use additional rules

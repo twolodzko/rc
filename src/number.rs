@@ -477,30 +477,6 @@ fn to_rat(f: f64) -> Number {
     Rational(sign * mantissa * base.pow(exponent as i32))
 }
 
-fn complex_nth_root(x: &num::Complex<f64>, n: &BigInt) -> num::Complex<f64> {
-    if n == &BigInt::from(2) {
-        x.sqrt()
-    } else if n == &BigInt::from(3) {
-        x.cbrt()
-    } else if let Some(n) = n.to_f64() {
-        x.powf(n.inv())
-    } else {
-        f64::NAN.into()
-    }
-}
-
-fn f64_nth_root(x: f64, n: &BigInt) -> f64 {
-    if n == &BigInt::from(2) {
-        x.sqrt()
-    } else if n == &BigInt::from(3) {
-        x.cbrt()
-    } else if let Some(n) = n.to_f64() {
-        x.powf(n.inv())
-    } else {
-        f64::NAN
-    }
-}
-
 macro_rules! op {
     ( $lhs:tt, $method:tt, $rhs:tt ) => {{
         match (&$lhs, &$rhs) {
