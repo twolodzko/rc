@@ -566,13 +566,10 @@ impl Pow<&Number> for &Number {
             // complex powers
             (Complex(x), Float(p)) => x.powf(p.0).into(),
             (Complex(x), Complex(p)) => x.powc(*p).into(),
-            (_, Complex(p)) => {
-                if let Some(s) = self.to_complex() {
-                    s.powc(*p).into()
-                } else {
-                    Number::NAN
-                }
-            }
+            (_, Complex(p)) => self
+                .to_complex()
+                .map(|c| c.powc(*p).into())
+                .unwrap_or(Number::NAN),
             // float powers
             (_, Float(rhs)) if *rhs == 0.5 => self.sqrt(),
             _ => rhs.to_f64().map(|x| self.powf(x)).unwrap_or(Number::NAN),
