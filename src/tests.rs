@@ -14,7 +14,6 @@ use test_case::test_case;
 #[test_case("(10/10)/0.5", "2"; "division by float")]
 #[test_case("sqrt(9) = 9^(1/2)", "3"; "sqrt")]
 #[test_case("4^(3/2)", "8"; "rational power")]
-#[test_case("-4^(3/2)", "0+8i"; "negative base to rational power")]
 #[test_case("4.0^(3/2)", "8"; "float negative base to rational power")]
 #[test_case("(51^4)^(1/4)", "51"; "power and nth root cancel")]
 #[test_case("0^2", "0"; "zero to positive power")]
@@ -126,8 +125,6 @@ use test_case::test_case;
 #[test_case("fun f(x) x+1; fun g(x) f(x)*2; g(5)", "12"; "nested function calls")]
 #[test_case("fun f(x) { y=x*10; x+y }; f(1)", "11"; "function with multiple instructions")]
 #[test_case("fun f() { 20*2+2 }; f()", "42"; "function with no arguments")]
-#[test_case("sqrt(-1) == -1^0.5", "0+1i"; "sqrt of minus one")]
-#[test_case("sqrt(-1)", "0+1i"; "sqrt of negative")]
 #[test_case("1/(1-1)", "NaN"; "division by zero")]
 #[test_case("(-5)!", "NaN"; "negative factorial")]
 #[test_case("0.5!", "NaN"; "non-integer factorial")]
@@ -181,6 +178,19 @@ use test_case::test_case;
 #[test_case("{ x=1; y=x+2; y^2 } / 5", "9/5"; "simple block")]
 
 fn basic(input: &str, expexted: &str) {
+    let (memory, funs) = init();
+    let result = eval_string(input, memory, funs).expect("unexpected error");
+    assert_eq!(result.to_string(), expexted)
+}
+
+#[test_case("-4^(3/2)", "0+8i"; "negative base to rational power")]
+#[test_case("sqrt(-1) == -1^0.5", "0+1i"; "sqrt of minus one")]
+#[test_case("sqrt(-4)", "0+2i"; "sqrt of negative")]
+fn complex(input: &str, expexted: &str) {
+    use super::COMPLEX;
+    unsafe {
+        COMPLEX = true;
+    }
     let (memory, funs) = init();
     let result = eval_string(input, memory, funs).expect("unexpected error");
     assert_eq!(result.to_string(), expexted)

@@ -1,6 +1,8 @@
 use anyhow::{Result, bail};
 use clap::Parser;
-use rc::{AssertionError, Functions, Memory, PRINT_AS_FLOAT, SCALE, eval_file, eval_string, init};
+use rc::{
+    AssertionError, COMPLEX, Functions, Memory, PRINT_AS_FLOAT, SCALE, eval_file, eval_string, init,
+};
 use rustyline::{Config, DefaultEditor, error::ReadlineError};
 use std::path::PathBuf;
 
@@ -87,6 +89,10 @@ struct Args {
     #[arg(long, short, env = "RC_QUIET")]
     quiet: bool,
 
+    /// For negative numbers sqrt, ln, log2, log10, and ^ would return complex results instead of NaN's
+    #[arg(long, short, env = "RC_COMPLEX")]
+    complex: bool,
+
     #[command(flatten)]
     script: Option<Script>,
 }
@@ -108,6 +114,7 @@ fn main() {
     unsafe {
         SCALE = args.scale;
         PRINT_AS_FLOAT = args.print_as_float;
+        COMPLEX = args.complex;
     }
     let (memory, funs) = init();
 

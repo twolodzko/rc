@@ -1,4 +1,4 @@
-use crate::{PRINT_AS_FLOAT, SCALE, expr::Method};
+use crate::{COMPLEX, PRINT_AS_FLOAT, SCALE, expr::Method};
 use Number::*;
 use anyhow::{Result, bail};
 use num::{
@@ -44,7 +44,7 @@ macro_rules! impl_complex_method {
         pub fn $t(&self) -> Number {
             if let Complex(n) = self {
                 n.$t().into()
-            } else if self.is_negative() {
+            } else if unsafe { COMPLEX } && self.is_negative() {
                 self.to_complex().map(|x| x.$t().into()).unwrap_or(Number::NAN)
             } else if let Some(x) = self.to_f64() {
                 x.$t().into()
@@ -578,7 +578,7 @@ impl Pow<&Number> for &Number {
                 let m = p.numer();
                 let n = p.denom();
                 let xm = self.powi(m);
-                if xm.is_negative() && n.is_even() {
+                if unsafe { COMPLEX } && xm.is_negative() && n.is_even() {
                     return xm
                         .to_complex()
                         .map(|ref xm| complex_nth_root(xm, n).into())
