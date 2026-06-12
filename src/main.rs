@@ -76,7 +76,7 @@ macro_rules! error {
 #[clap(after_long_help = ABOUT)]
 struct Args {
     /// The number of digits after the decimal point that are printed for floating-point numbers
-    #[arg(long, env = "RC_SCALE")]
+    #[arg(long, short, env = "RC_SCALE")]
     scale: Option<usize>,
 
     /// Print rational numbers as floats (this does not affect computation mode)
@@ -84,7 +84,7 @@ struct Args {
     print_as_float: bool,
 
     /// Don't print the result except when explicitly using print()
-    #[arg(long, env = "RC_QUIET")]
+    #[arg(long, short, env = "RC_QUIET")]
     quiet: bool,
 
     #[command(flatten)]
