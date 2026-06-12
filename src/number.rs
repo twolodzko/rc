@@ -429,25 +429,9 @@ impl Number {
     fn nth_root(&self, n: &BigInt) -> Number {
         // https://math.stackexchange.com/a/1608619
         if let Complex(x) = self {
-            if n == &BigInt::from(2) {
-                x.sqrt().into()
-            } else if n == &BigInt::from(3) {
-                x.cbrt().into()
-            } else if let Some(n) = n.to_f64() {
-                x.powf(n.inv()).into()
-            } else {
-                Number::NAN
-            }
+            complex_nth_root(x, n).into()
         } else if let Some(x) = self.to_f64() {
-            if n == &BigInt::from(2) {
-                x.sqrt().into()
-            } else if n == &BigInt::from(3) {
-                x.cbrt().into()
-            } else if let Some(n) = n.to_f64() {
-                x.powf(n.inv()).into()
-            } else {
-                Number::NAN
-            }
+            f64_nth_root(x, n).into()
         } else {
             Number::NAN
         }
@@ -467,6 +451,30 @@ fn to_rat(f: f64) -> Number {
     let mantissa = Ratio::from_integer(mantissa.into());
     let base = Ratio::from_integer(BigInt::from(2));
     Rational(sign * mantissa * base.pow(exponent as i32))
+}
+
+fn complex_nth_root(x: &num::Complex<f64>, n: &BigInt) -> num::Complex<f64> {
+    if n == &BigInt::from(2) {
+        x.sqrt()
+    } else if n == &BigInt::from(3) {
+        x.cbrt()
+    } else if let Some(n) = n.to_f64() {
+        x.powf(n.inv())
+    } else {
+        f64::NAN.into()
+    }
+}
+
+fn f64_nth_root(x: f64, n: &BigInt) -> f64 {
+    if n == &BigInt::from(2) {
+        x.sqrt()
+    } else if n == &BigInt::from(3) {
+        x.cbrt()
+    } else if let Some(n) = n.to_f64() {
+        x.powf(n.inv())
+    } else {
+        f64::NAN
+    }
 }
 
 macro_rules! op {
@@ -573,7 +581,7 @@ impl Pow<&Number> for &Number {
                 if xm.is_negative() && n.is_even() {
                     return xm
                         .to_complex()
-                        .map(|xm| Complex(xm).nth_root(n))
+                        .map(|ref xm| complex_nth_root(xm, n).into())
                         .unwrap_or(Number::NAN);
                 }
                 xm.nth_root(n)
