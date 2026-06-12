@@ -112,6 +112,7 @@ impl Number {
         }
     }
 
+    /// Number is an even integer
     pub fn is_even(&self) -> bool {
         self.to_bigint().is_some_and(|x| x.is_even())
     }

@@ -134,11 +134,7 @@ impl Interval {
     }
 
     /// Min-max algorithm applies function to all the pairs of the interval bounds and returns min and max of the results
-    pub fn min_max(
-        &self,
-        other: &Interval,
-        fun: fn(&Number, &Number) -> Number,
-    ) -> (Number, Number) {
+    fn min_max(&self, other: &Interval, fun: fn(&Number, &Number) -> Number) -> (Number, Number) {
         let cartesian = [
             fun(&self.lower, &other.lower),
             fun(&self.lower, &other.upper),
