@@ -29,7 +29,7 @@ macro_rules! impl_method {
                 Complex(n) => Complex(n.$t()),
                 _ => {
                     if let Some(x) = self.to_f64() {
-                        Float(x.$t().into())
+                        x.$t().into()
                     } else {
                         Number::NAN
                     }
@@ -43,7 +43,7 @@ macro_rules! impl_libm {
     ($($t:tt)*) => ($(
         pub fn $t(&self) -> Number {
             if let Some(x) = self.to_f64() {
-                Float(libm::$t(x).into())
+                libm::$t(x).into()
             } else {
                 Number::NAN
             }
@@ -126,7 +126,7 @@ impl Number {
             Integer(x) => Integer(x.abs()),
             Rational(x) => Rational(x.abs()),
             Float(x) => Float(x.abs()),
-            Complex(x) => Float(x.norm().into()),
+            Complex(x) => x.norm().into(),
         }
     }
 
@@ -191,9 +191,9 @@ impl Number {
             }
             Complex(x) => {
                 if let Ok(n) = TryInto::<i32>::try_into(rhs) {
-                    Complex(x.powi(n))
+                    x.powi(n).into()
                 } else if let Some(rhs) = rhs.to_f64() {
-                    Complex(x.powf(rhs))
+                    x.powf(rhs).into()
                 } else {
                     Number::NAN
                 }
@@ -206,7 +206,7 @@ impl Number {
             Integer(_) => self.clone(),
             Rational(x) => Integer(x.floor().to_integer()),
             Float(x) => x.floor().to_bigint().map(Integer).unwrap_or(Number::NAN),
-            Complex(x) => Complex(num::Complex::new(x.re.floor(), x.im.floor())),
+            Complex(x) => num::Complex::new(x.re.floor(), x.im.floor()).into(),
         }
     }
 
@@ -215,7 +215,7 @@ impl Number {
             Integer(_) => self.clone(),
             Rational(x) => Integer(x.ceil().to_integer()),
             Float(x) => x.ceil().to_bigint().map(Integer).unwrap_or(Number::NAN),
-            Complex(x) => Complex(num::Complex::new(x.re.ceil(), x.im.ceil())),
+            Complex(x) => num::Complex::new(x.re.ceil(), x.im.ceil()).into(),
         }
     }
 
@@ -224,7 +224,7 @@ impl Number {
             Integer(_) => self.clone(),
             Rational(x) => Integer(x.round().to_integer()),
             Float(x) => x.round().to_bigint().map(Integer).unwrap_or(Number::NAN),
-            Complex(x) => Complex(num::Complex::new(x.re.round(), x.im.round())),
+            Complex(x) => num::Complex::new(x.re.round(), x.im.round()).into(),
         }
     }
 
@@ -233,7 +233,7 @@ impl Number {
             Integer(_) => self.clone(),
             Rational(x) => Integer(x.trunc().to_integer()),
             Float(x) => x.trunc().to_bigint().map(Integer).unwrap_or(Number::NAN),
-            Complex(x) => Complex(num::Complex::new(x.re.trunc(), x.im.trunc())),
+            Complex(x) => num::Complex::new(x.re.trunc(), x.im.trunc()).into(),
         }
     }
 
@@ -345,9 +345,9 @@ impl Number {
     /// Attempt casting number to float or return NaN
     pub fn cast_to_float(&self) -> Number {
         match self {
-            Integer(i) => Float(i.to_f64().unwrap_or(f64::NAN).into()),
-            Rational(r) => Float(r.to_f64().unwrap_or(f64::NAN).into()),
-            Complex(c) => Float(c.to_f64().unwrap_or(f64::NAN).into()),
+            Integer(x) => x.to_f64().unwrap_or(f64::NAN).into(),
+            Rational(x) => x.to_f64().unwrap_or(f64::NAN).into(),
+            Complex(x) => x.to_f64().unwrap_or(f64::NAN).into(),
             Float(_) => self.clone(),
         }
     }
@@ -448,28 +448,28 @@ macro_rules! op {
             (Complex(a), Complex(b)) => Complex(a.$method(b)),
             (Complex(a), _) => {
                 if let Some(b) = $rhs.to_f64() {
-                    Complex(a.$method(b))
+                    a.$method(b).into()
                 } else {
                     Number::NAN
                 }
             }
             (_, Complex(b)) => {
                 if let Some(a) = $lhs.to_f64() {
-                    Complex(a.$method(b))
+                    a.$method(b).into()
                 } else {
                     Number::NAN
                 }
             }
             (Float(a), _) => {
                 if let Some(b) = $rhs.to_f64() {
-                    Float(a.0.$method(b).into())
+                    a.0.$method(b).into()
                 } else {
                     Number::NAN
                 }
             }
             (_, Float(b)) => {
                 if let Some(a) = $lhs.to_f64() {
-                    Float(a.$method(b.0).into())
+                    a.$method(b.0).into()
                 } else {
                     Number::NAN
                 }
@@ -539,27 +539,21 @@ impl Pow<&Number> for &Number {
                 let m = p.numer();
                 let n = p.denom();
                 let xm = self.powi(m);
-                Float(nth_root(xm, n).into())
+                nth_root(xm, n).into()
             }
             // complex powers
-            (Complex(x), Float(p)) => Complex(x.powf(p.0)),
-            (Complex(x), Complex(p)) => Complex(x.powc(*p)),
+            (Complex(x), Float(p)) => x.powf(p.0).into(),
+            (Complex(x), Complex(p)) => x.powc(*p).into(),
             (_, Complex(p)) => {
                 if let Some(s) = self.to_complex() {
-                    Complex(s.powc(*p))
+                    s.powc(*p).into()
                 } else {
                     Number::NAN
                 }
             }
             // float powers
             (_, Float(rhs)) if *rhs == 0.5 => self.sqrt(),
-            _ => {
-                if let Some(x) = rhs.to_f64() {
-                    self.powf(x)
-                } else {
-                    Number::NAN
-                }
-            }
+            _ => rhs.to_f64().map(|x| self.powf(x)).unwrap_or(Number::NAN),
         }
     }
 }
@@ -601,7 +595,7 @@ impl Inv for &Number {
             Integer(x) => Rational(Ratio::new(BigInt::one(), x.clone())),
             Rational(x) => Rational(x.inv()),
             Float(x) => Float(x.recip()),
-            Complex(x) => Complex(x.inv()),
+            Complex(x) => x.inv().into(),
         }
     }
 }
@@ -650,6 +644,12 @@ impl From<f64> for Number {
 impl From<usize> for Number {
     fn from(value: usize) -> Self {
         Number::Integer(value.into())
+    }
+}
+
+impl From<Complex<f64>> for Number {
+    fn from(value: Complex<f64>) -> Self {
+        Complex(value)
     }
 }
 
