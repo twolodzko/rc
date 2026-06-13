@@ -153,7 +153,7 @@ impl Number {
                 .map(|c| Complex(c.powf(rhs)))
                 .unwrap_or(Number::NAN)
         } else if let Some(x) = self.to_f64() {
-            Float(x.powf(rhs).into())
+            x.powf(rhs).into()
         } else {
             Number::NAN
         }
