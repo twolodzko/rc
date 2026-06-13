@@ -398,6 +398,7 @@ impl Number {
     }
 
     pub fn to_complex(&self) -> Option<Complex<f64>> {
+        debug_assert!(unsafe { COMPLEX });
         match self {
             Integer(x) => Some(Complex::from(x.to_f64()?)),
             Rational(x) => Some(Complex::from(x.to_f64()?)),

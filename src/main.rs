@@ -20,6 +20,8 @@ Calculator supporting arbitrary precision integers, rational, and complex number
 * Intervals: <s>2~7</s>, <s>5/4~7</s>.
 * Vectors: <s>[]</s>, <s>[1/3, 0.5, 1, 74]</s>.
 
+Complex numbers are available when using <s>--complex</s> flag. When using complex numbers, primitives such as <s>sqrt</s>, <s>ln</s>, <s>log2</s>, and <s>log10</s>, will return complex results for negative numbers (instead of NaN's), same for non-even powers of negative numbers.
+
 <s><u>Operators:</u></s>
 
 Arithmetic: <s>+</s>, <s>-</s>, <s>*</s>, <s>/</s>, <s>//</s> (integer division), <s>%</s> (reminder), <s>^</s> (exponentiation).
@@ -89,7 +91,7 @@ struct Args {
     #[arg(long, short, env = "RC_QUIET")]
     quiet: bool,
 
-    /// For negative numbers sqrt, ln, log2, log10, and ^ would return complex results instead of NaN's
+    /// Support complex numbers. This will return complex results for come computations like sqrt or power
     #[arg(long, short, env = "RC_COMPLEX")]
     complex: bool,
 
@@ -100,11 +102,11 @@ struct Args {
 #[derive(Parser)]
 #[group(multiple = false)]
 struct Script {
-    /// Commands that are executed
+    /// Commands to be executed
     #[arg(allow_hyphen_values = true)]
     script: Option<String>,
 
-    /// Read the commands from the file
+    /// Execute commands from the file
     #[arg(short = 'f', long = "file")]
     path: Option<PathBuf>,
 }
