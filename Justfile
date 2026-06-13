@@ -5,8 +5,11 @@ basic-test:
     cargo clippy
     cargo test --quiet
 
-integration-test: build
+integration-test: build-dev
     bats tests.bats
+
+build-dev:
+    cargo build --profile dev
 
 build:
     cargo build --release
