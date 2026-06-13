@@ -580,12 +580,12 @@ impl Pow<&Number> for &Number {
                 let n = p.denom();
                 let xm = self.powi(m);
                 if unsafe { COMPLEX } && xm.is_negative() && n.is_even() {
-                    return xm
-                        .to_complex()
+                    xm.to_complex()
                         .map(|ref xm| complex_nth_root(xm, n).into())
-                        .unwrap_or(Number::NAN);
+                        .unwrap_or(Number::NAN)
+                } else {
+                    xm.nth_root(n)
                 }
-                xm.nth_root(n)
             }
             // complex powers
             (Complex(x), Float(p)) => x.powf(p.0).into(),
