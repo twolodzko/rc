@@ -148,7 +148,7 @@ impl Number {
     }
 
     fn powf(&self, rhs: f64) -> Number {
-        if self.is_negative() {
+        if unsafe { COMPLEX } && self.is_negative() {
             self.to_complex()
                 .map(|c| Complex(c.powf(rhs)))
                 .unwrap_or(Number::NAN)
