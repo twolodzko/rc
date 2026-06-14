@@ -17,11 +17,17 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
             // values & variables
             Value(n) => return Ok(n),
             Variable(ref n) => {
-                return memory
-                    .borrow()
-                    .get(n)
-                    .cloned()
-                    .ok_or(anyhow!("uninitialized variable {}", n));
+                return match n.as_str() {
+                    "pi" => Ok(Algebra::Number(Number::PI)),
+                    "e" => Ok(Algebra::Number(Number::E)),
+                    "i" => Ok(Algebra::Number(Number::I)),
+                    "epsilon" => Ok(Algebra::Number(Number::EPSILON)),
+                    _ => memory
+                        .borrow()
+                        .get(n)
+                        .cloned()
+                        .ok_or(anyhow!("uninitialized variable {}", n)),
+                };
             }
             Primitive(m, ref e) => {
                 let val = eval(e, memory, funs)?;
@@ -95,6 +101,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                 ref rhs,
             } => {
                 if let Expr::Variable(k) = lhs.as_ref()
+                    && !is_constant(k)
                     && !memory.borrow().contains_key(k)
                 {
                     let val = eval(rhs, memory.clone(), funs)?;
@@ -102,6 +109,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                     return Ok(val);
                 }
                 if let Expr::Variable(k) = rhs.as_ref()
+                    && !is_constant(k)
                     && !memory.borrow().contains_key(k)
                 {
                     let val = eval(lhs, memory.clone(), funs)?;
@@ -550,4 +558,8 @@ fn eval_template(
         msg.push_str(s);
     }
     Ok((msg, last))
+}
+
+fn is_constant(name: &str) -> bool {
+    matches!(name, "pi" | "e" | "i" | "epsilon")
 }

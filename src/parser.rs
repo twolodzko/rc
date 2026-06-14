@@ -118,10 +118,25 @@ fn parse_expr(pairs: Pairs<Rule>) -> Result<Expr> {
                 Rule::sub => Op::Sub,
                 rule => bail!("unexpected operator {:?}", rule),
             };
+            let lhs = lhs?;
+            let rhs = rhs?;
+            if op == Op::Pow {
+                match lhs {
+                    Expr::Variable(ref n) if n == "e" => {
+                        return Ok(Expr::Primitive(Method::Exp, Box::new(rhs)));
+                    }
+                    Expr::Value(Algebra::Number(x))
+                        if x.to_bigint().is_some_and(|x| x == 2.into()) =>
+                    {
+                        return Ok(Expr::Primitive(Method::Exp2, Box::new(rhs)));
+                    }
+                    _ => (),
+                }
+            }
             Ok(Expr::BinaryOp {
-                lhs: Box::new(lhs?),
+                lhs: Box::new(lhs),
                 op,
-                rhs: Box::new(rhs?),
+                rhs: Box::new(rhs),
             })
         })
         .map_prefix(|op, rhs| match op.as_rule() {
@@ -212,13 +227,7 @@ fn parse_primary(primary: Pair<'_, Rule>) -> Result<Expr> {
         }
         Rule::term => parse_expr(primary.into_inner()),
         Rule::name => {
-            let expr = match primary.as_str().to_lowercase().as_str() {
-                "pi" => Expr::Value(Algebra::Number(Number::Float(std::f64::consts::PI.into()))),
-                "e" => Expr::Value(Algebra::Number(Number::Float(std::f64::consts::E.into()))),
-                "i" if unsafe { COMPLEX } => {
-                    Expr::Value(Algebra::Number(Number::Complex(num::complex::Complex::I)))
-                }
-                "epsilon" => Expr::Value(Algebra::Number(Number::Float(f64::EPSILON.into()))),
+            let expr = match primary.as_str() {
                 "nan" => Expr::Value(Algebra::Number(Number::NAN)),
                 "inf" => Expr::Value(Algebra::Number(Number::INFINITY)),
                 _ => Expr::Variable(primary.to_string()),

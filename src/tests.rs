@@ -55,6 +55,7 @@ use test_case::test_case;
 #[test_case("ceil(10/3)", "4"; "ceil of rational")]
 #[test_case("ln(e)", "1"; "ln of e")]
 #[test_case("exp(1) = e", "2.718281828459045"; "exp of 1")]
+#[test_case("e^32.23432423423432 = exp(32.23432423423432)", "99813467420430.53"; "e to power is exp")]
 #[test_case("rat(pi) = pi", "3.141592653589793"; "rat of pi")]
 #[test_case("5^-3", "1/125"; "integer to negative power")]
 #[test_case("log(exp(42))", "42"; "log of exp")]
@@ -168,6 +169,7 @@ use test_case::test_case;
 #[test_case("{ x=1; y=x+2; y^2 } / 5", "9/5"; "simple block")]
 #[test_case("-4^(3/2)", "NaN"; "negative base to rational power")]
 #[test_case("sqrt(-4)", "NaN"; "sqrt of negative")]
+#[test_case("log2(2^42)", "42"; "log2 of exp2")]
 
 fn basic(input: &str, expexted: &str) {
     let (memory, funs) = init();

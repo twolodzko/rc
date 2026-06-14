@@ -72,8 +72,12 @@ impl Number {
     pub const INFINITY: Number = Float(OrderedFloat(f64::INFINITY));
     pub const NEG_INFINITY: Number = Float(OrderedFloat(f64::NEG_INFINITY));
     pub const ZERO: Number = Integer(BigInt::ZERO);
+    pub const PI: Number = Number::Float(OrderedFloat(std::f64::consts::PI));
+    pub const E: Number = Number::Float(OrderedFloat(std::f64::consts::E));
+    pub const I: Number = Number::Complex(num::complex::Complex::I);
+    pub const EPSILON: Number = Number::Float(OrderedFloat(f64::EPSILON));
 
-    impl_method!(cbrt exp sin cos tan asin acos atan tanh sinh cosh asinh acosh atanh);
+    impl_method!(cbrt exp exp2 sin cos tan asin acos atan tanh sinh cosh asinh acosh atanh);
     impl_complex_method!(sqrt ln log2 log10);
     impl_libm!(erf erfc lgamma tgamma);
 
@@ -327,6 +331,7 @@ impl Number {
             Erf => self.erf(),
             Erfc => self.erfc(),
             Exp => self.exp(),
+            Exp2 => self.exp2(),
             Fact => self.factorial(),
             Floor => self.floor(),
             Gamma => self.tgamma(),
