@@ -34,7 +34,7 @@ Interval specific: <s>~</s> (create interval), <s>&</s> (intersection of interva
 
 <s><u>Primitives:</u></s>
 
-Trigonometric functions: <s>acos</s>, <s>acosh</s>, <s>asin</s>, <s>asinh</s>, <s>atan</s>, <s>atanh</s>, <s>cos</s>, <s>cosh</s>, <s>sin</s>, <s>sinh</s>, <s>tan</s>, <s>tanh</s>.
+Trigonometric functions: <s>acos</s>, <s>acosh</s>, <s>asin</s>, <s>asinh</s>, <s>atan</s>, <s>atanh</s>, <s>cos</s>, <s>cosh</s>, <s>sin</s>, <s>sinh</s>, <s>tan</s>, <s>tanh</s>. <s>rad</s> converts degrees to radians, and <s>deg</s> does the opposite conversion.
 
 Common mathematical functions: <s>abs</s>, <s>sqrt</s> (square root), <s>cbrt</s> (cube root), <s>exp</s>, <s>ln</s> (or <s>log</s>), <s>log10</s>, <s>log2</s>, <s>ceil</s>, <s>floor</s>, <s>round</s>, <s>erf</s> (error function), <s>erfc</s> (complimentary error function), <s>gamma</s>, <s>lgamma</s> (log of gamma function), <s>factorial</s>, <s>choose</s> (binomial coefficient).
 

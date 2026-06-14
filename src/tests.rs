@@ -170,6 +170,8 @@ use test_case::test_case;
 #[test_case("-4^(3/2)", "NaN"; "negative base to rational power")]
 #[test_case("sqrt(-4)", "NaN"; "sqrt of negative")]
 #[test_case("log2(2^42)", "42"; "log2 of exp2")]
+#[test_case("rad(180) = pi", "3.141592653589793"; "radians")]
+#[test_case("deg(pi) = rad", "180"; "degrees")]
 
 fn basic(input: &str, expexted: &str) {
     let (memory, funs) = init();
@@ -178,7 +180,7 @@ fn basic(input: &str, expexted: &str) {
 }
 
 #[test_case("-4^(3/2)", "0+8i"; "negative base to rational power")]
-#[test_case("sqrt(-1) == -1^0.5", "0+1i"; "sqrt of minus one")]
+#[test_case("sqrt(-1) = -1^0.5", "0+1i"; "sqrt of minus one")]
 #[test_case("sqrt(-4)", "0+2i"; "sqrt of negative")]
 #[test_case("(0+0i) + (0+0i)", "0+0i"; "complex zero add")]
 #[test_case("(1+0i) * (2+0i)", "2+0i"; "real complex mul")]

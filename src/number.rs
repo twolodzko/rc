@@ -72,6 +72,7 @@ impl Number {
     pub const INFINITY: Number = Float(OrderedFloat(f64::INFINITY));
     pub const NEG_INFINITY: Number = Float(OrderedFloat(f64::NEG_INFINITY));
     pub const ZERO: Number = Integer(BigInt::ZERO);
+    // common constants
     pub const PI: Number = Number::Float(OrderedFloat(std::f64::consts::PI));
     pub const E: Number = Number::Float(OrderedFloat(std::f64::consts::E));
     pub const I: Number = Number::Complex(num::complex::Complex::I);
@@ -328,6 +329,10 @@ impl Number {
             Ceil => self.ceil(),
             Cos => self.cos(),
             Cosh => self.cosh(),
+            Deg => self
+                .to_f64()
+                .map(|x| x.to_degrees().into())
+                .unwrap_or(Number::NAN),
             Erf => self.erf(),
             Erfc => self.erfc(),
             Exp => self.exp(),
@@ -340,6 +345,10 @@ impl Number {
             Log10 => self.log10(),
             Log2 => self.log2(),
             Neg => self.neg(),
+            Rad => self
+                .to_f64()
+                .map(|x| x.to_radians().into())
+                .unwrap_or(Number::NAN),
             Round => self.round(),
             Sin => self.sin(),
             Sinh => self.sinh(),
