@@ -262,7 +262,7 @@ impl Number {
         }
     }
 
-    pub(crate) fn to_usize(&self) -> Option<usize> {
+    pub fn to_usize(&self) -> Option<usize> {
         match self {
             Integer(x) => x.to_usize(),
             Float(x) => x.to_usize(),
@@ -337,7 +337,7 @@ impl Number {
         }
     }
 
-    pub fn floor(&self) -> Number {
+    fn floor(&self) -> Number {
         match self {
             Integer(_) => self.clone(),
             Rational(x) => Integer(x.floor().to_integer()),
@@ -346,7 +346,7 @@ impl Number {
         }
     }
 
-    pub fn ceil(&self) -> Number {
+    fn ceil(&self) -> Number {
         match self {
             Integer(_) => self.clone(),
             Rational(x) => Integer(x.ceil().to_integer()),
@@ -355,7 +355,7 @@ impl Number {
         }
     }
 
-    pub fn round(&self) -> Number {
+    fn round(&self) -> Number {
         match self {
             Integer(_) => self.clone(),
             Rational(x) => Integer(x.round().to_integer()),
@@ -383,7 +383,7 @@ impl Number {
         }
     }
 
-    pub fn factorial(&self) -> Number {
+    fn factorial(&self) -> Number {
         let Some(n) = self.to_bigint() else {
             return Number::NAN;
         };
