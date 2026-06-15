@@ -76,6 +76,11 @@ impl Interval {
         self.lower.is_one() && self.upper.is_one()
     }
 
+    /// The values in the interval are positive
+    pub fn is_positive(&self) -> bool {
+        self.lower.is_positive()
+    }
+
     /// The values in the interval are negative
     pub fn is_negative(&self) -> bool {
         self.upper.is_negative()
@@ -366,11 +371,11 @@ impl Pow<&Interval> for &Interval {
 
         // "Interval Arithmetic Specification" by Chiriaev et al (1998)
         // "The Extended Real Interval System" by Walster (1970)
-        if self.lower.is_positive() {
+        if self.is_positive() {
             // base is on the positive side
             let (lower, upper) = self.min_max(rhs, |a, b| a.pow(b));
             Interval { lower, upper }
-        } else if self.upper.is_negative() {
+        } else if self.is_negative() {
             // base is on the negative side
             let (_, upper) = self.neg().min_max(rhs, |a, b| a.pow(b));
             Interval {
@@ -422,7 +427,7 @@ impl Pow<&Number> for &Interval {
             return self.clone();
         }
         // TODO: is this correct?
-        if self.upper.is_negative() || self.lower.is_positive() {
+        if self.is_negative() || self.is_positive() {
             // base is either on the negative or positive side
             let a = self.lower.pow(rhs);
             let b = self.upper.pow(rhs);
