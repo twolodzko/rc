@@ -45,7 +45,7 @@ macro_rules! impl_complex_method {
             if let Complex(n) = self {
                 n.$t().into()
             } else if unsafe { COMPLEX } && self.is_negative() {
-                self.to_complex().map(|x| x.$t().into()).unwrap_or(Number::NAN)
+                self.to_complex().map(|x| Complex(x.$t())).unwrap_or(Number::NAN)
             } else if let Some(x) = self.to_f64() {
                 x.$t().into()
             } else {
@@ -276,7 +276,8 @@ impl Number {
             Integer(x) => Integer(x.abs()),
             Rational(x) => Rational(x.abs()),
             Float(x) => Float(x.abs()),
-            Complex(x) => x.norm().into(),
+            // |a + bi| = sqrt(a^2 + b^2)
+            Complex(x) => Float(x.norm().into()),
         }
     }
 
@@ -327,9 +328,9 @@ impl Number {
             }
             Complex(x) => {
                 if let Ok(n) = TryInto::<i32>::try_into(rhs) {
-                    x.powi(n).into()
+                    Complex(x.powi(n))
                 } else if let Some(rhs) = rhs.to_f64() {
-                    x.powf(rhs).into()
+                    Complex(x.powf(rhs))
                 } else {
                     Number::NAN
                 }
@@ -502,14 +503,14 @@ macro_rules! op {
             (Complex(a), Complex(b)) => Complex(a.$method(b)),
             (Complex(a), _) => {
                 if let Some(b) = $rhs.to_f64() {
-                    a.$method(b).into()
+                    Complex(a.$method(b))
                 } else {
                     Number::NAN
                 }
             }
             (_, Complex(b)) => {
                 if let Some(a) = $lhs.to_f64() {
-                    a.$method(b).into()
+                    Complex(a.$method(b))
                 } else {
                     Number::NAN
                 }
@@ -602,11 +603,11 @@ impl Pow<&Number> for &Number {
                 }
             }
             // complex powers
-            (Complex(x), Float(p)) => x.powf(p.0).into(),
-            (Complex(x), Complex(p)) => x.powc(*p).into(),
+            (Complex(x), Float(p)) => Complex(x.powf(p.0)),
+            (Complex(x), Complex(p)) => Complex(x.powc(*p)),
             (_, Complex(p)) => self
                 .to_complex()
-                .map(|c| c.powc(*p).into())
+                .map(|c| Complex(c.powc(*p)))
                 .unwrap_or(Number::NAN),
             // float powers
             (_, Float(rhs)) if *rhs == 0.5 => self.sqrt(),
@@ -636,7 +637,7 @@ impl Inv for &Number {
             Integer(x) => Rational(Ratio::new(BigInt::one(), x.clone())),
             Rational(x) => Rational(x.inv()),
             Float(x) => Float(x.recip()),
-            Complex(x) => x.inv().into(),
+            Complex(x) => Complex(x.inv()),
         }
     }
 }
