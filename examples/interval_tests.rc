@@ -1,0 +1,47 @@
+
+fun _arith_test() {
+   data = seq(-10, 10, 0.01)
+   interval = min(data)~max(data)
+   val = rand() * max(data) * 2 - max(data)
+
+   add = data + val
+   interval + val = min(add)~max(add)
+
+   sub = data - val
+   interval - val = min(sub)~max(sub)
+
+   mul = data * val
+   interval * val = min(mul)~max(mul)
+
+   div = data / val
+   interval / val = min(div)~max(div)
+
+   idiv = data // val
+   interval // val = min(idiv)~max(idiv)
+}
+
+fun _pow_test() {
+   data = seq(1, 10)
+   x = floor(rand() * max(data) * 2 - max(data))
+   y = floor(rand() * max(data) * 2 - max(data))
+   interval = min(data)~max(data)
+
+   pow = data ^ x
+   interval ^ x = min(pow)~max(pow)
+
+   # for y/x that is not NaN
+   k = y/x and {
+      ipow = data ^ k
+      interval ^ k = min(ipow)~max(ipow)
+   }
+}
+
+fun repeat(n) {
+   if n > 0 then {
+      _arith_test()
+      _pow_test()
+      repeat(n - 1)
+   } else n
+}
+
+repeat(1000)

@@ -10,6 +10,13 @@ fun _step(a, b, n) {
       floor(a)
 }
 
+fun _map(x, j, acc) {
+   if j > len(x) then
+      acc
+   else
+      _map(x, j+1, push(acc, isqrt(x[j])))
+}
+
 fun isqrt(n) {
    if isvec(n) then
       map(n, isqrt)

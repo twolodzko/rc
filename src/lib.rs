@@ -25,6 +25,7 @@ use std::{cell::RefCell, collections::HashMap, fs::File, io::Read, path::PathBuf
 /// The number of digits after the decimal point to print
 pub static mut SCALE: Option<usize> = None;
 pub static mut PRINT_AS_FLOAT: bool = false;
+pub static mut COMPLEX: bool = false;
 
 #[derive(Debug, Clone)]
 pub enum Template {

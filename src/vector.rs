@@ -2,7 +2,7 @@ use crate::{Algebra, expr::Method, number::Number};
 use anyhow::Result;
 use num::{BigInt, One};
 
-#[derive(Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Vector(pub Vec<Algebra>);
 
 impl Vector {
@@ -52,7 +52,7 @@ impl Vector {
         self.zip(rhs)
             .map(|(a, b)| a * b)
             .reduce(|ref acc, ref e| acc + e)
-            .unwrap_or(Algebra::Scalar(Number::ZERO))
+            .unwrap_or(Algebra::Number(Number::ZERO))
     }
 
     pub fn min(&self) -> Algebra {
@@ -65,9 +65,9 @@ impl Vector {
 
     pub fn sum(&self) -> Algebra {
         if self.is_empty() {
-            return Algebra::Scalar(Number::ZERO);
+            return Algebra::Number(Number::ZERO);
         }
-        let mut sum = Algebra::Scalar(Number::ZERO);
+        let mut sum = Algebra::Number(Number::ZERO);
         for v in &self.0 {
             sum = &sum + v;
         }
@@ -76,9 +76,9 @@ impl Vector {
 
     pub fn prod(&self) -> Algebra {
         if self.is_empty() {
-            return Algebra::Scalar(Number::Integer(BigInt::one()));
+            return Algebra::Number(Number::Integer(BigInt::one()));
         }
-        let mut prod = Algebra::Scalar(Number::Integer(BigInt::one()));
+        let mut prod = Algebra::Number(Number::Integer(BigInt::one()));
         for v in &self.0 {
             prod = &prod * v;
         }
@@ -105,17 +105,6 @@ impl std::fmt::Display for Vector {
         let vals = self
             .iter()
             .map(ToString::to_string)
-            .collect::<Vec<_>>()
-            .join(", ");
-        write!(f, "[{}]", vals)
-    }
-}
-
-impl std::fmt::Debug for Vector {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let vals = self
-            .iter()
-            .map(|v| format!("{:?}", v))
             .collect::<Vec<_>>()
             .join(", ");
         write!(f, "[{}]", vals)

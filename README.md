@@ -12,6 +12,10 @@ types:
 * 64-bit floating point numbers represented by [`OrderedFloat<f64>`][f64] in Rust.
 * Complex numbers represented by [`Complex<f64>`][complex].
 
+Complex numbers are available when using `--complex` flag. When using complex numbers,
+primitives such as `sqrt`, `ln`, `log2`, and `log10`, will return complex results
+for negative numbers (instead of NaN's), same for non-even powers of negative numbers.
+
 In the case of operations on the numbers of different types, they are casted based
 on precedence: _integer < rational < float < complex_. Some operations use additional rules
 or skip the conversions if possible, for example raising numbers to integer powers
@@ -38,9 +42,9 @@ Vectors can be compared to scalars, for example `[1,2,3] < 4` means
 _all the values are less than four_. The equality operator `=` checks
 for exact equality, so `1 = [1,1,1]` would be _false_.
 
-`:` operator extracts element from a vector. `[1,2,3]:2` extracts second
-element, `[1,2,3,4]:[3,4]` extracts the third and fourth elements, `[1,2,3,4,5]:2~5`
-the elements at indexes from 2 to 5.
+`[1,2,3][2]` extracts second element, `[1,2,3,4][3,4]` extracts the vector
+containing third and fourth elements, and `[1,2,3,4,5][2~5]` the elements
+at indexes from 2 to 5.
 
 `push(vec, v1, v2, ...)` creates a new vector by taking `vec`
 and pushing the `v1`, `v2`, etc values at its back.
@@ -70,8 +74,8 @@ assertion error is thrown. `?=` operator checks if two values have the same type
 (vector, integer, etc) regardless of value.
 
 `abs` (or just `|x|`), `floor`, `ceil` primitives can operate on numbers of any type.
-The  `sqrt`, `cbrt`, `ln` (or `log`), `log2`, `log10`, `exp` will
-cast numbers to floats, but have also complex number variants.
+The  `sqrt`, `cbrt`, `ln` (or `log`), `log2`, `log10`, `exp`, `rad` (convert degrees to radians),
+`deg` (convert radians to degrees) will cast numbers to floats, but have also complex number variants.
 `erf`, `erfc`, `gamma`, `lgamma` are implemented only for floats and not for complex numbers.
 `x!` (factorial) is defined only for numbers that can be casted to integers
 
@@ -127,9 +131,9 @@ it returns a vector of `count` random values.
 
 To run a script from a file use `load(path/to/script)`.
 
-`dbg` would print a debug log for given expression. `print(2 + 2 = {2+2})` would print "2 + 2 = 4"
-interpreting arguments (including whitespaces) as a string and the content of {} as an expression
-that is evaluated. Special characters can be escaped, for example `\n` is a newline, or `\{` and `\}`
+`print(2 + 2 = {2+2})` would print "2 + 2 = 4" interpreting arguments (including whitespaces)
+as a string and the content of {} as an expression that is evaluated. Special characters can
+be escaped, for example `\n` is a newline, or `\{` and `\}`
 are escaped curly brackets.
 
 `rat` can be used to transform floating-point number to an approximate rational representation, for example:
@@ -137,7 +141,7 @@ are escaped curly brackets.
 ```text
 > rat(pi)
 884279719003555/281474976710656
-> 884279719003555/281474976710656 * 1.0
+> float(884279719003555/281474976710656)
 3.141592653589793
 > pi
 3.141592653589793

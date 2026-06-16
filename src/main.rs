@@ -1,6 +1,8 @@
 use anyhow::{Result, bail};
 use clap::Parser;
-use rc::{AssertionError, Functions, Memory, PRINT_AS_FLOAT, SCALE, eval_file, eval_string, init};
+use rc::{
+    AssertionError, COMPLEX, Functions, Memory, PRINT_AS_FLOAT, SCALE, eval_file, eval_string, init,
+};
 use rustyline::{Config, DefaultEditor, error::ReadlineError};
 use std::path::PathBuf;
 
@@ -18,6 +20,8 @@ Calculator supporting arbitrary precision integers, rational, and complex number
 * Intervals: <s>2~7</s>, <s>5/4~7</s>.
 * Vectors: <s>[]</s>, <s>[1/3, 0.5, 1, 74]</s>.
 
+Complex numbers are available when using <s>--complex</s> flag. When using complex numbers, primitives such as <s>sqrt</s>, <s>ln</s>, <s>log2</s>, and <s>log10</s>, will return complex results for negative numbers (instead of NaN's), same for non-even powers of negative numbers.
+
 <s><u>Operators:</u></s>
 
 Arithmetic: <s>+</s>, <s>-</s>, <s>*</s>, <s>/</s>, <s>//</s> (integer division), <s>%</s> (reminder), <s>^</s> (exponentiation).
@@ -28,11 +32,9 @@ The <s>and</s> and <s>or</s> operators would treat NaN and assertion errors as f
 
 Interval specific: <s>~</s> (create interval), <s>&</s> (intersection of intervals), <s>|</s> (interval hull).
 
-The <s>:</s> operator is used to extract a value from vector (left-hand-side) at the index (right-hand-side). The index could be a positive integer, vector of integers, or an interval (indexes from~to, inclusive). <s>@</s> calculates a dot product of two vectors.
-
 <s><u>Primitives:</u></s>
 
-Trigonometric functions: <s>acos</s>, <s>acosh</s>, <s>asin</s>, <s>asinh</s>, <s>atan</s>, <s>atanh</s>, <s>cos</s>, <s>cosh</s>, <s>sin</s>, <s>sinh</s>, <s>tan</s>, <s>tanh</s>.
+Trigonometric functions: <s>acos</s>, <s>acosh</s>, <s>asin</s>, <s>asinh</s>, <s>atan</s>, <s>atanh</s>, <s>cos</s>, <s>cosh</s>, <s>sin</s>, <s>sinh</s>, <s>tan</s>, <s>tanh</s>. <s>rad</s> converts degrees to radians, and <s>deg</s> does the opposite conversion.
 
 Common mathematical functions: <s>abs</s>, <s>sqrt</s> (square root), <s>cbrt</s> (cube root), <s>exp</s>, <s>ln</s> (or <s>log</s>), <s>log10</s>, <s>log2</s>, <s>ceil</s>, <s>floor</s>, <s>round</s>, <s>erf</s> (error function), <s>erfc</s> (complimentary error function), <s>gamma</s>, <s>lgamma</s> (log of gamma function), <s>factorial</s>, <s>choose</s> (binomial coefficient).
 
@@ -44,9 +46,9 @@ Type conversions: <s>int</s> (convert to integer), <s>float</s> (convert to floa
 
 <s>rand(len)</s> creates a vector or random values in the [0, 1) range. Without the len parameter, return a single value.
 
-<s>dbg</s> would print a debug log for given expression.
-
 <s>print(2 + 2 = {2+2})</s> would print "2 + 2 = 4" interpreting arguments (including whitespaces) as a string and the content of {} as an expression that is evaluated. Special characters can be escaped, for example \n is a newline, or \{ and \} are escaped curly brackets.
+
+<s>[1,2,3][2]</s> extracts second element from the vector, <s>[1,2,3,4][3,4]</s> extracts the vector containing third and fourth elements, and <s>[1,2,3,4,5][2~5]</s> the elements at indexes from 2 to 5.
 
 <s><u>Custom functions</u></s>
 
@@ -78,16 +80,20 @@ macro_rules! error {
 #[clap(after_long_help = ABOUT)]
 struct Args {
     /// The number of digits after the decimal point that are printed for floating-point numbers
-    #[arg(long, env = "RC_SCALE")]
+    #[arg(long, short, env = "RC_SCALE")]
     scale: Option<usize>,
 
     /// Print rational numbers as floats (this does not affect computation mode)
     #[arg(long, env = "RC_PRINT_AS_FLOAT")]
     print_as_float: bool,
 
-    /// Don't print the result except when explicitly using print() or dbg()
-    #[arg(long, env = "RC_QUIET")]
+    /// Don't print the result except when explicitly using print()
+    #[arg(long, short, env = "RC_QUIET")]
     quiet: bool,
+
+    /// Support complex numbers. This will return complex results for come computations like sqrt or power
+    #[arg(long, short, env = "RC_COMPLEX")]
+    complex: bool,
 
     #[command(flatten)]
     script: Option<Script>,
@@ -96,11 +102,11 @@ struct Args {
 #[derive(Parser)]
 #[group(multiple = false)]
 struct Script {
-    /// Commands that are executed
+    /// Commands to be executed
     #[arg(allow_hyphen_values = true)]
     script: Option<String>,
 
-    /// Read the commands from the file
+    /// Execute commands from the file
     #[arg(short = 'f', long = "file")]
     path: Option<PathBuf>,
 }
@@ -110,6 +116,7 @@ fn main() {
     unsafe {
         SCALE = args.scale;
         PRINT_AS_FLOAT = args.print_as_float;
+        COMPLEX = args.complex;
     }
     let (memory, funs) = init();
 

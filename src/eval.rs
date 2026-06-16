@@ -7,6 +7,7 @@ use crate::{
 };
 use anyhow::{Result, anyhow, bail};
 use num::{BigInt, One};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra> {
     use Expr::*;
@@ -15,20 +16,33 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
         match expr {
             // values & variables
             Value(n) => return Ok(n),
-            NewVec(ref exprs) => {
-                let vals = eval_all(exprs, memory, funs)?;
-                return Ok(Algebra::Vector(vals.into()));
-            }
             Variable(ref n) => {
-                return memory
-                    .borrow()
-                    .get(n)
-                    .cloned()
-                    .ok_or(anyhow!("uninitialized variable {}", n));
+                return match n.as_str() {
+                    "pi" => Ok(Algebra::Number(Number::PI)),
+                    "e" => Ok(Algebra::Number(Number::E)),
+                    "i" => Ok(Algebra::Number(Number::I)),
+                    "epsilon" => Ok(Algebra::Number(Number::EPSILON)),
+                    _ => memory
+                        .borrow()
+                        .get(n)
+                        .cloned()
+                        .ok_or(anyhow!("uninitialized variable {}", n)),
+                };
             }
             Primitive(m, ref e) => {
                 let val = eval(e, memory, funs)?;
                 return val.primitive(m);
+            }
+            NewVec(ref exprs) => {
+                let vals = eval_all(exprs, memory, funs)?;
+                return Ok(Algebra::Vector(vals.into()));
+            }
+            VecGet(ref vec, ref index) => {
+                if let Algebra::Vector(vec) = &eval(vec, memory.clone(), funs.clone())? {
+                    let index = eval_all(index, memory, funs)?;
+                    return extract(vec, &index);
+                }
+                bail!("{} cannot be indexed", vec)
             }
             // operations
             BinaryOp {
@@ -40,7 +54,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                 let rhs = eval(rhs, memory, funs)?;
                 let ok = match rhs {
                     Algebra::Interval(rhs) => {
-                        let Algebra::Scalar(ref lhs) = lhs else {
+                        let Algebra::Number(ref lhs) = lhs else {
                             bail!("{} is not a number", lhs)
                         };
                         rhs.contains(lhs)
@@ -61,10 +75,11 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
             } => {
                 // early stop
                 let val = eval(lhs, memory.clone(), funs.clone())?;
-                return if val.is_nan() {
+                if val.is_nan() {
                     return Ok(val);
                 } else {
-                    eval(rhs, memory, funs)
+                    // tail-call optimization
+                    expr = *rhs.clone();
                 };
             }
             BinaryOp {
@@ -73,11 +88,12 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                 ref rhs,
             } => {
                 // ignore failure
-                return match eval(lhs, memory.clone(), funs.clone()) {
-                    Ok(val) if !val.is_nan() => Ok(val),
+                match eval(lhs, memory.clone(), funs.clone()) {
+                    Ok(val) if !val.is_nan() => return Ok(val),
                     Err(err) if !err.is::<AssertionError>() => bail!(err),
-                    _ => eval(rhs, memory, funs),
-                };
+                    // tail-call optimization
+                    _ => expr = *rhs.clone(),
+                }
             }
             BinaryOp {
                 ref lhs,
@@ -85,6 +101,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                 ref rhs,
             } => {
                 if let Expr::Variable(k) = lhs.as_ref()
+                    && !is_constant(k)
                     && !memory.borrow().contains_key(k)
                 {
                     let val = eval(rhs, memory.clone(), funs)?;
@@ -92,6 +109,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                     return Ok(val);
                 }
                 if let Expr::Variable(k) = rhs.as_ref()
+                    && !is_constant(k)
                     && !memory.borrow().contains_key(k)
                 {
                     let val = eval(lhs, memory.clone(), funs)?;
@@ -101,12 +119,6 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
 
                 let lhs = eval(lhs, memory.clone(), funs.clone())?;
                 let rhs = eval(rhs, memory, funs)?;
-                if lhs.is_nan() {
-                    return Ok(lhs);
-                }
-                if rhs.is_nan() {
-                    return Ok(rhs);
-                }
                 if lhs == rhs {
                     return Ok(rhs);
                 } else {
@@ -115,21 +127,28 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
             }
             BinaryOp {
                 ref lhs,
-                op: op @ (Op::Ne | Op::Lt | Op::Le | Op::Gt | Op::Ge),
+                op: Op::Ne,
                 ref rhs,
             } => {
                 let lhs = eval(lhs, memory.clone(), funs.clone())?;
                 let rhs = eval(rhs, memory, funs)?;
-                if lhs.is_nan() {
-                    return Ok(lhs);
-                }
-                if rhs.is_nan() {
+                if lhs != rhs {
                     return Ok(rhs);
-                }
-                return if lhs.compare(op, &rhs) {
-                    Ok(rhs)
                 } else {
                     bail!(AssertionError(expr))
+                };
+            }
+            BinaryOp {
+                ref lhs,
+                op: op @ (Op::Lt | Op::Le | Op::Gt | Op::Ge),
+                ref rhs,
+            } => {
+                let lhs = eval(lhs, memory.clone(), funs.clone())?;
+                let rhs = eval(rhs, memory, funs)?;
+                if lhs.is_nan() ^ rhs.is_nan() || !lhs.compare(op, &rhs) {
+                    bail!(AssertionError(expr))
+                } else {
+                    return Ok(rhs);
                 };
             }
             BinaryOp {
@@ -137,7 +156,6 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                 op: Op::EqType,
                 ref rhs,
             } => {
-                dbg!(&expr);
                 let lhs = eval(lhs, memory.clone(), funs.clone())?;
                 let rhs = eval(rhs, memory, funs)?;
                 return if lhs.equal_type(&rhs) {
@@ -153,10 +171,10 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
             } => {
                 let lhs = &eval(lhs, memory.clone(), funs.clone())?;
                 let rhs = &eval(rhs, memory, funs)?;
-                let Algebra::Scalar(lhs) = lhs else {
+                let Algebra::Number(lhs) = lhs else {
                     bail!("only intervals of numbers are defined")
                 };
-                let Algebra::Scalar(rhs) = rhs else {
+                let Algebra::Number(rhs) = rhs else {
                     bail!("only intervals of numbers are defined")
                 };
                 return Ok(Algebra::Interval(Interval::checked(lhs, rhs)?));
@@ -177,17 +195,6 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
             }
             BinaryOp {
                 ref lhs,
-                op: Op::Get,
-                ref rhs,
-            } => {
-                if let Algebra::Vector(vec) = &eval(lhs, memory.clone(), funs.clone())? {
-                    let index = &eval(rhs, memory, funs)?;
-                    return extract(vec, index);
-                }
-                bail!("{} cannot be indexed", lhs)
-            }
-            BinaryOp {
-                ref lhs,
                 op,
                 ref rhs,
             } => {
@@ -199,13 +206,13 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
             Apply(ref name, ref exprs) if name == "rand" => {
                 fn random() -> Algebra {
                     let r = rand::random_range(0.0..1.0);
-                    Algebra::Scalar(Number::Float(r.into()))
+                    Algebra::Number(Number::Float(r.into()))
                 }
                 match exprs.len() {
                     0 => return Ok(random()),
                     1 => {
                         let val = eval(&exprs[0], memory, funs)?;
-                        if let Algebra::Scalar(ref n) = val
+                        if let Algebra::Number(ref n) = val
                             && let Number::Integer(n) = n
                         {
                             let vals: Vec<Algebra> = std::iter::from_fn(|| Some(random()))
@@ -246,7 +253,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                 }
                 let val = match eval(&exprs[0], memory, funs)? {
                     Algebra::Vector(ref v) => v.min(),
-                    Algebra::Interval(ref a) => Algebra::Scalar(a.lower.clone()),
+                    Algebra::Interval(ref a) => Algebra::Number(a.lower.clone()),
                     other => other,
                 };
                 return Ok(val);
@@ -261,7 +268,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                 }
                 let val = match eval(&exprs[0], memory, funs)? {
                     Algebra::Vector(ref v) => v.max(),
-                    Algebra::Interval(ref a) => Algebra::Scalar(a.upper.clone()),
+                    Algebra::Interval(ref a) => Algebra::Number(a.upper.clone()),
                     other => other,
                 };
                 return Ok(val);
@@ -273,7 +280,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                 return vec_apply(name, exprs, memory, funs, |v| v.prod());
             }
             Apply(ref name, ref exprs) if name == "len" => {
-                return Ok(Algebra::Scalar(vec_apply(
+                return Ok(Algebra::Number(vec_apply(
                     name,
                     exprs,
                     memory,
@@ -287,7 +294,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                     exprs,
                     memory,
                     funs,
-                    |v| v.iter().rev().cloned().collect::<Vec<_>>().into(),
+                    |v| v.0.iter().cloned().rev().collect::<Vec<_>>().into(),
                 )?));
             }
             Apply(ref name, ref exprs) if name == "push" => {
@@ -319,7 +326,13 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                 };
                 let mut this = eval_to_number(&exprs[0], memory.clone(), funs.clone())?;
                 let end = eval_to_number(&exprs[1], memory, funs)?;
-                if this.is_nan() || end.is_nan() || step.is_nan() || &this > &end {
+                if this.is_nan()
+                    || end.is_nan()
+                    || step.is_nan()
+                    || step.is_zero()
+                    || (&this < &end && step.is_negative())
+                    || (&this > &end && step.is_positive())
+                {
                     bail!(
                         "invalid {} arguments: from {} to {} by {}",
                         name,
@@ -330,7 +343,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                 }
                 let mut acc = Vec::new();
                 while &this <= &end {
-                    acc.push(Algebra::Scalar(this.clone()));
+                    acc.push(Algebra::Number(this.clone()));
                     this = &this + &step;
                 }
                 return Ok(Algebra::Vector(acc.into()));
@@ -372,7 +385,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                     })
                 }
                 let val = eval(&exprs[0], memory, funs)?;
-                return Ok(val.map(|x| x.cast_to_integer()));
+                return Ok(val.map(|x| x.to_bigint().map(Number::Integer).unwrap_or(Number::NAN)));
             }
             Apply(ref name, ref exprs) if name == "float" => {
                 if exprs.len() != 1 {
@@ -383,7 +396,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                     })
                 }
                 let val = eval(&exprs[0], memory, funs)?;
-                return Ok(val.map(|x| x.cast_to_float()));
+                return Ok(val.map(|x| x.to_f64().map(|f| f.into()).unwrap_or(Number::NAN)));
             }
             Apply(ref name, ref exprs) if name == "rat" => {
                 if exprs.len() != 1 {
@@ -395,15 +408,6 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                 }
                 let val = eval(&exprs[0], memory, funs)?;
                 return Ok(val.map(|x| x.rat()));
-            }
-            Apply(ref name, ref exprs) if name == "dbg" => {
-                let mut last = Algebra::NAN;
-                for expr in exprs {
-                    let val = eval(expr, memory.clone(), funs.clone())?;
-                    println!("# {:?} = {:?}", expr, val);
-                    last = val;
-                }
-                return Ok(last);
             }
             // tail-call optimized
             Block(ref exprs) => {
@@ -431,17 +435,13 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                 return Ok(Algebra::NAN);
             }
             Print(ref template) => {
-                let mut last = Algebra::NAN;
-                for t in template {
-                    match t {
-                        Template::String(s) => print!("{}", s),
-                        Template::Field(e) => {
-                            last = eval(e, memory.clone(), funs.clone())?;
-                            print!("{}", last)
-                        }
-                    }
-                }
+                let (msg, last) = eval_template(template, memory, funs)?;
+                print!("{}", msg);
                 return Ok(last);
+            }
+            Error(ref template) => {
+                let (msg, _) = eval_template(template, memory, funs)?;
+                bail!(msg)
             }
             Load(ref path) => return eval_file(path, memory, funs),
         }
@@ -457,10 +457,11 @@ impl Function {
                 count: args.len()
             })
         }
-        let local: Memory = Default::default();
+        let mut local = HashMap::new();
         for (key, val) in std::iter::zip(self.args.iter(), args) {
-            local.borrow_mut().insert(key.to_string(), val.clone());
+            local.insert(key.to_string(), val.clone());
         }
+        let local = Rc::new(RefCell::new(local));
         // tail-call optimization
         if self.body.len() == 1 {
             return Ok((self.body[0].clone(), local));
@@ -512,48 +513,81 @@ fn vec_apply<T>(
 
 fn eval_to_number(expr: &Expr, memory: Memory, funs: Functions) -> Result<Number> {
     let val = eval(expr, memory, funs)?;
-    if let Algebra::Scalar(val) = val {
+    if let Algebra::Number(val) = val {
         Ok(val)
     } else {
         bail!("{} is not a number", val)
     }
 }
 
-fn extract(vector: &vector::Vector, index: &Algebra) -> Result<Algebra> {
+fn extract(vector: &vector::Vector, index: &[Algebra]) -> Result<Algebra> {
     use Algebra::*;
-    match index {
-        Scalar(index) => {
-            if let Some(index) = index.to_usize()
-                && index >= 1
+    let mut acc = Vec::new();
+    let asking_for_many = index.len() > 1 || index.first().is_some_and(|i| !matches!(i, Number(_)));
+    for i in index {
+        match i {
+            Number(index)
+                if let Some(index) = index.to_usize()
+                    && index >= 1 =>
             {
-                return Ok(vector.0.get(index - 1).cloned().unwrap_or(Algebra::NAN));
-            }
-        }
-        Interval(range) => {
-            if let Some(lower) = range.lower.to_usize()
-                && let Some(upper) = range.upper.to_usize()
-                && lower >= 1
-            {
-                return Ok(Vector(vector::Vector(
-                    vector.0[lower - 1..upper.min(vector.len())].to_vec(),
-                )));
-            }
-        }
-        Vector(indexes) => {
-            let mut acc = Vec::new();
-            for i in &indexes.0 {
-                if let Scalar(i) = i
-                    && let Some(i) = i.to_usize()
-                    && i >= 1
-                {
-                    let val = vector.0.get(i - 1).cloned().unwrap_or(Algebra::NAN);
+                if let Some(val) = vector.0.get(index - 1).cloned() {
                     acc.push(val);
-                } else {
-                    bail!("{} is not a valid index", index)
                 }
             }
-            return Ok(Vector(acc.into()));
+            Interval(range)
+                if let Some(lower) = range.lower.to_usize()
+                    && let Some(upper) = range.upper.to_usize()
+                    && lower >= 1 =>
+            {
+                if !vector.is_empty() {
+                    let mut vec = vector.0[lower - 1..upper.min(vector.len())].to_vec();
+                    acc.append(&mut vec);
+                }
+            }
+            Vector(indexes) => {
+                for j in &indexes.0 {
+                    if let Number(j) = j
+                        && let Some(j) = j.to_usize()
+                        && j >= 1
+                    {
+                        if let Some(val) = vector.0.get(j - 1).cloned() {
+                            acc.push(val);
+                        }
+                    } else {
+                        bail!("{} is not a valid index", j)
+                    }
+                }
+            }
+            _ => bail!("{} is not a valid index", i),
         }
     }
-    bail!("{} is not a valid index", index)
+    if asking_for_many {
+        Ok(Algebra::Vector(acc.into()))
+    } else {
+        Ok(acc.pop().unwrap_or(Algebra::NAN))
+    }
+}
+
+fn eval_template(
+    template: &[Template],
+    memory: Memory,
+    funs: Functions,
+) -> Result<(String, Algebra)> {
+    let mut msg = String::new();
+    let mut last = Algebra::NAN;
+    for t in template {
+        let s = match t {
+            Template::String(s) => s,
+            Template::Field(e) => {
+                last = eval(e, memory.clone(), funs.clone())?;
+                &last.to_string()
+            }
+        };
+        msg.push_str(s);
+    }
+    Ok((msg, last))
+}
+
+fn is_constant(name: &str) -> bool {
+    matches!(name, "pi" | "e" | "i" | "epsilon")
 }

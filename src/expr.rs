@@ -5,6 +5,7 @@ use std::path::PathBuf;
 pub enum Expr {
     Value(Algebra),
     NewVec(Vec<Expr>),
+    VecGet(Box<Expr>, Vec<Expr>),
     Variable(String),
     Primitive(Method, Box<Expr>),
     BinaryOp {
@@ -18,6 +19,7 @@ pub enum Expr {
     IfElse(Box<Expr>, Box<Expr>, Box<Expr>),
     Load(PathBuf),
     Print(Vec<Template>),
+    Error(Vec<Template>),
 }
 
 #[derive(Debug, Clone)]
@@ -39,7 +41,6 @@ pub enum Op {
     Eq,
     EqType,
     Ge,
-    Get,
     Gt,
     Idiv,
     In,
@@ -66,9 +67,11 @@ pub enum Method {
     Ceil,
     Cos,
     Cosh,
+    Deg,
     Erf,
     Erfc,
     Exp,
+    Exp2,
     Fact,
     Floor,
     Gamma,
@@ -77,6 +80,7 @@ pub enum Method {
     Log10,
     Log2,
     Neg,
+    Rad,
     Round,
     Sin,
     Sinh,
@@ -98,6 +102,15 @@ impl std::fmt::Display for Expr {
                     .join(", ");
                 write!(f, "[{}]", values)
             }
+            VecGet(v, i) => write!(
+                f,
+                "{}[{}]",
+                v,
+                i.iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
             Variable(s) => write!(f, "{}", s),
             Primitive(m, e) => {
                 use self::Method::*;
@@ -143,6 +156,15 @@ impl std::fmt::Display for Expr {
             Print(template) => write!(
                 f,
                 "print({})",
+                template
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<String>>()
+                    .join(",")
+            ),
+            Error(template) => write!(
+                f,
+                "error({})",
                 template
                     .iter()
                     .map(ToString::to_string)
@@ -203,7 +225,6 @@ impl std::fmt::Display for Op {
             Eq => write!(f, "="),
             EqType => write!(f, "?="),
             Ge => write!(f, ">="),
-            Get => write!(f, ":"),
             Gt => write!(f, ">"),
             Idiv => write!(f, "//"),
             In => write!(f, "in"),
@@ -234,9 +255,11 @@ impl std::fmt::Display for Method {
             Ceil => write!(f, "ceil"),
             Cos => write!(f, "cos"),
             Cosh => write!(f, "cosh"),
+            Deg => write!(f, "deg"),
             Erf => write!(f, "erf"),
             Erfc => write!(f, "erfc"),
             Exp => write!(f, "exp"),
+            Exp2 => write!(f, "exp2"),
             Fact => write!(f, "factorial"),
             Floor => write!(f, "floor"),
             Gamma => write!(f, "gamma"),
@@ -245,6 +268,7 @@ impl std::fmt::Display for Method {
             Log10 => write!(f, "log10"),
             Log2 => write!(f, "log2"),
             Neg => write!(f, "negate"),
+            Rad => write!(f, "rad"),
             Round => write!(f, "round"),
             Sin => write!(f, "sin"),
             Sinh => write!(f, "sinh"),

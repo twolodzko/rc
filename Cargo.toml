@@ -22,3 +22,7 @@ test-case = "3.3.1"
 [profile.release]
 strip = "symbols"
 lto = true
+
+[profile.dev]
+debug = true
+strip = "none"

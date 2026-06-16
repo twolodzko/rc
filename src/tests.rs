@@ -14,14 +14,13 @@ use test_case::test_case;
 #[test_case("(10/10)/0.5", "2"; "division by float")]
 #[test_case("sqrt(9) = 9^(1/2)", "3"; "sqrt")]
 #[test_case("4^(3/2)", "8"; "rational power")]
-#[test_case("-4^(3/2)", "8"; "negative base to rational power")]
 #[test_case("4.0^(3/2)", "8"; "float negative base to rational power")]
+#[test_case("(51^4)^(1/4)", "51"; "power and nth root cancel")]
 #[test_case("0^2", "0"; "zero to positive power")]
 #[test_case("0^(-5)", "NaN"; "zero to negative power")]
 #[test_case("0^(-0.5)", "NaN"; "zero to negative float power")]
 #[test_case("(-4*4*4)^(-1/3)", "-0.25"; "negative number to negative rational power")]
 #[test_case("-27^(1/3)", "-3"; "negative base to rational odd power")]
-#[test_case("1+2i", "1+2i"; "complex number")]
 #[test_case("2+4*10", "42"; "order of operations")]
 #[test_case("10 % 3", "1"; "modulo operation")]
 #[test_case("25 % 5", "0"; "modulo zero result")]
@@ -33,11 +32,6 @@ use test_case::test_case;
 #[test_case("(2/3)*(3/4)", "1/2"; "product of rationals")]
 #[test_case("(1/2)-(1/4)", "1/4"; "difference of rationals")]
 #[test_case("(3/4)^2", "9/16"; "rational squared")]
-#[test_case("(1+2i)+(3+4i)", "4+6i"; "sum of complex")]
-#[test_case("(2+3i)*(4+5i)", "-7+22i"; "product of complex")]
-#[test_case("(5+0i)-(3+0i)", "2+0i"; "difference of complex")]
-#[test_case("abs(3+4i)", "5"; "absolute of complex")]
-#[test_case("(1+i)^2", "0+2i"; "complex squared")]
 #[test_case("x=10;y=x/5;2*y", "4"; "using variables")]
 #[test_case("a=5;b=10;a+b", "15"; "multiple variables")]
 #[test_case("0.5^-1", "2"; "float to negative power")]
@@ -56,16 +50,14 @@ use test_case::test_case;
 #[test_case("10 <= 10", "10"; "less equal boundary")]
 #[test_case("1=1=1=1", "1"; "equality")]
 #[test_case("floor(12.345)", "12"; "floor of float")]
-#[test_case("floor(12.345 + 0i)", "12"; "floor of complex")]
 #[test_case("ceil(12.345)", "13"; "ceil of float")]
 #[test_case("floor(10/3)", "3"; "floor of rational")]
 #[test_case("ceil(10/3)", "4"; "ceil of rational")]
 #[test_case("ln(e)", "1"; "ln of e")]
 #[test_case("exp(1) = e", "2.718281828459045"; "exp of 1")]
+#[test_case("e^32.23432423423432 = exp(32.23432423423432)", "99813467420430.53"; "e to power is exp")]
 #[test_case("rat(pi) = pi", "3.141592653589793"; "rat of pi")]
-#[test_case("i^2 = -1", "-1"; "complex i squared")]
 #[test_case("5^-3", "1/125"; "integer to negative power")]
-#[test_case("sqrt(i^2) = i", "0+1i"; "sqrt of complex")]
 #[test_case("log(exp(42))", "42"; "log of exp")]
 #[test_case("sin(asin(0.45))", "0.45"; "sin of asin")]
 #[test_case("sqrt(42^2)", "42"; "sqrt of square")]
@@ -113,7 +105,6 @@ use test_case::test_case;
 #[test_case("rat(0.125)", "1/8"; "rat of eighth")]
 #[test_case("float(rat(pi)) = pi", "3.141592653589793"; "float after rat")]
 #[test_case("int(17.0)", "17"; "int from float")]
-#[test_case("int(5+0i)", "5"; "int from complex")]
 #[test_case("int(6/2)", "3"; "int from rational")]
 #[test_case("load(examples/fibonacci.rc)", "4181"; "load fibonacci")]
 #[test_case("fun f(x) x; f(84/2)", "42"; "identity fun call")]
@@ -125,7 +116,6 @@ use test_case::test_case;
 #[test_case("fun f(x) x+1; fun g(x) f(x)*2; g(5)", "12"; "nested function calls")]
 #[test_case("fun f(x) { y=x*10; x+y }; f(1)", "11"; "function with multiple instructions")]
 #[test_case("fun f() { 20*2+2 }; f()", "42"; "function with no arguments")]
-#[test_case("sqrt(-1)", "NaN"; "sqrt of negative")]
 #[test_case("1/(1-1)", "NaN"; "division by zero")]
 #[test_case("(-5)!", "NaN"; "negative factorial")]
 #[test_case("0.5!", "NaN"; "non-integer factorial")]
@@ -149,13 +139,14 @@ use test_case::test_case;
 #[test_case("seq(0.1,1,0.3)", "[0.1, 0.4, 0.7, 1]"; "range for float")]
 #[test_case("5 in 1~10", "5"; "in interval")]
 #[test_case("2 in [1,2,3,4]", "2"; "in vector")]
-#[test_case("[]:1", "NaN"; "extract from empty vector")]
-#[test_case("[]:1~10", "[]"; "extract range from empty vector")]
-#[test_case("[10,20,30,40,50]:2", "20"; "extact value from vector")]
-#[test_case("[10,20,30,40,50]:21", "NaN"; "extract value our of range from vector")]
-#[test_case("[10,20,30,40,50]:2~4", "[20, 30, 40]"; "extract slice from vector")]
-#[test_case("[10,20,30,40,50]:1+2/2", "20"; "extract where index is expression")]
-#[test_case("[10,20,30,40,50]:[2,1,100,3]", "[20, 10, NaN, 30]"; "extact using vector indexing")]
+#[test_case("[][1]", "NaN"; "extract from empty vector")]
+#[test_case("[][1,[1],[2,3],4~6]", "[]"; "extract multiple elements from empty vector")]
+#[test_case("[][1~10]", "[]"; "extract range from empty vector")]
+#[test_case("[10,20,30,40,50][2]", "20"; "extact value from vector")]
+#[test_case("[10,20,30,40,50][21]", "NaN"; "extract value our of range from vector")]
+#[test_case("[10,20,30,40,50][2~4]", "[20, 30, 40]"; "extract slice from vector")]
+#[test_case("[10,20,30,40,50][1+2/2]", "20"; "extract where index is expression")]
+#[test_case("[10,20,30,40,50][2,1,100,3]", "[20, 10, 30]"; "extract using vector indexing")]
 #[test_case("push([], [])", "[[]]"; "push value to empty vector")]
 #[test_case("v=[]; push(v, -1); v", "[]"; "pushing does not mutate vector")]
 #[test_case("push([1,2], 3, 4)", "[1, 2, 3, 4]"; "push values to vector")]
@@ -176,8 +167,44 @@ use test_case::test_case;
 #[test_case("-|5| != |-5|", "5"; "absolute value operation order")]
 #[test_case("fun f(x) { x+2; _^2 }; f(2)", "16"; "using last value placeholder in functions")]
 #[test_case("{ x=1; y=x+2; y^2 } / 5", "9/5"; "simple block")]
+#[test_case("-4^(3/2)", "NaN"; "negative base to rational power")]
+#[test_case("sqrt(-4)", "NaN"; "sqrt of negative")]
+#[test_case("log2(2^42)", "42"; "log2 of exp2")]
+#[test_case("rad(180) = pi", "3.141592653589793"; "radians")]
+#[test_case("deg(pi) = rad", "180"; "degrees")]
 
 fn basic(input: &str, expexted: &str) {
+    let (memory, funs) = init();
+    let result = eval_string(input, memory, funs).expect("unexpected error");
+    assert_eq!(result.to_string(), expexted)
+}
+
+#[test_case("-4^(3/2)", "0+8i"; "negative base to rational power")]
+#[test_case("sqrt(-1) = -1^0.5", "0+1i"; "sqrt of minus one")]
+#[test_case("sqrt(-4)", "0+2i"; "sqrt of negative")]
+#[test_case("(0+0i) + (0+0i)", "0+0i"; "complex zero add")]
+#[test_case("(1+0i) * (2+0i)", "2+0i"; "real complex mul")]
+#[test_case("(0+1i) * (0+1i)", "-1+0i"; "i squared")]
+#[test_case("(2+3i) - (2+3i)", "0+0i"; "complex self subtract")]
+#[test_case("(5+0i) / (5+0i)", "1+0i"; "complex self divide")]
+#[test_case("abs(5+0i)", "5"; "abs of real complex")]
+#[test_case("abs(0+5i)", "5"; "abs of imaginary")]
+#[test_case("(2+0i) + (3+0i)", "5+0i"; "complex add")]
+#[test_case("1+2i", "1+2i"; "complex number")]
+#[test_case("(1+2i)+(3+4i)", "4+6i"; "sum of complex")]
+#[test_case("(2+3i)*(4+5i)", "-7+22i"; "product of complex")]
+#[test_case("(5+0i)-(3+0i)", "2+0i"; "difference of complex")]
+#[test_case("abs(3+4i)", "5"; "absolute of complex")]
+#[test_case("(1+i)^2", "0+2i"; "complex squared")]
+#[test_case("sqrt(i^2) = i", "0+1i"; "sqrt of complex")]
+#[test_case("i^2 = -1", "-1"; "complex i squared")]
+#[test_case("floor(12.345 + 0i)", "12"; "floor of complex")]
+#[test_case("int(5+0i)", "5"; "int from complex")]
+fn complex(input: &str, expexted: &str) {
+    use super::COMPLEX;
+    unsafe {
+        COMPLEX = true;
+    }
     let (memory, funs) = init();
     let result = eval_string(input, memory, funs).expect("unexpected error");
     assert_eq!(result.to_string(), expexted)
@@ -208,13 +235,14 @@ fn basic(input: &str, expexted: &str) {
 #[test_case("unknownfunc(42)"; "unknown function call")]
 #[test_case("-2 in 1~5"; "negative in interval assertion")]
 #[test_case("20 in [1,5,10]"; "negative in vector assertion")]
-#[test_case("2:1"; "extract from invalid lhs")]
-#[test_case("[]:0"; "zero index")]
-#[test_case("[1,2,3]:-5"; "negative index")]
+#[test_case("2[1]"; "extract from invalid lhs")]
+#[test_case("[][0]"; "zero index")]
+#[test_case("[1,2,3][-5]"; "negative index")]
 #[test_case("1 ?= 11~22"; "integer and interval have different types")]
 #[test_case("[] ?= 11~22"; "list and interval have different types")]
 #[test_case("1 ?= 5.0"; "integer and float have different types")]
 #[test_case("1/2 ?= 0.5"; "rational and float have different types")]
+#[test_case("error()"; "empty error")]
 fn expect_error(input: &str) {
     let (memory, funs) = init();
     assert!(eval_string(input, memory, funs).is_err())
@@ -223,7 +251,6 @@ fn expect_error(input: &str) {
 #[test_case("2 + 3", "5"; "int add")]
 #[test_case("2.0 + 3.0", "5"; "float add")]
 #[test_case("2/1 + 3/1", "5"; "rational add")]
-#[test_case("(2+0i) + (3+0i)", "5+0i"; "complex add")]
 #[test_case("2 + 3.0", "5"; "int float add")]
 #[test_case("2/1 + 3", "5"; "rational int add")]
 #[test_case("2.0 + 3/1", "5"; "float rational add")]
@@ -390,13 +417,6 @@ fn expect_error(input: &str) {
 #[test_case("(5.0)!", "120"; "factorial of five float")]
 #[test_case("(0/1)!", "1"; "factorial of zero rational")]
 #[test_case("(4/1)!", "24"; "factorial of four rational")]
-#[test_case("(0+0i) + (0+0i)", "0+0i"; "complex zero add")]
-#[test_case("(1+0i) * (2+0i)", "2+0i"; "real complex mul")]
-#[test_case("(0+1i) * (0+1i)", "-1+0i"; "i squared")]
-#[test_case("(2+3i) - (2+3i)", "0+0i"; "complex self subtract")]
-#[test_case("(5+0i) / (5+0i)", "1+0i"; "complex self divide")]
-#[test_case("abs(5+0i)", "5"; "abs of real complex")]
-#[test_case("abs(0+5i)", "5"; "abs of imaginary")]
 #[test_case("2 + 3 * 4", "14"; "add mul precedence")]
 #[test_case("2 * 3 + 4", "10"; "mul add precedence")]
 #[test_case("10 - 2 * 3", "4"; "sub mul precedence")]
@@ -485,15 +505,15 @@ fn numbers(input: &str, expexted: &str) {
 #[test_case("rev([])", "[]"; "rev empty")]
 #[test_case("rev([1])", "[1]"; "rev singleton")]
 #[test_case("rev([1,2,3])", "[3, 2, 1]"; "rev three elements")]
-#[test_case("[10,20,30]:1", "10"; "index first")]
-#[test_case("[10,20,30]:2", "20"; "index middle")]
-#[test_case("[10,20,30]:3", "30"; "index last")]
-#[test_case("[10,20,30,40,50]:1~3", "[10, 20, 30]"; "slice start")]
-#[test_case("[10,20,30,40,50]:3~5", "[30, 40, 50]"; "slice end")]
-#[test_case("[10,20,30,40,50]:2~4", "[20, 30, 40]"; "slice middle")]
-#[test_case("[10,20,30]:1~3", "[10, 20, 30]"; "slice all")]
-#[test_case("[10,20,30,40,50]:[1,3,5]", "[10, 30, 50]"; "index by vector")]
-#[test_case("[10,20,30,40,50]:[5,4,3,2,1]", "[50, 40, 30, 20, 10]"; "index reverse")]
+#[test_case("[10,20,30][1]", "10"; "index first")]
+#[test_case("[10,20,30][2]", "20"; "index middle")]
+#[test_case("[10,20,30][3]", "30"; "index last")]
+#[test_case("[10,20,30,40,50][1~3]", "[10, 20, 30]"; "slice start")]
+#[test_case("[10,20,30,40,50][3~5]", "[30, 40, 50]"; "slice end")]
+#[test_case("[10,20,30,40,50][2~4]", "[20, 30, 40]"; "slice middle")]
+#[test_case("[10,20,30][1~3]", "[10, 20, 30]"; "slice all")]
+#[test_case("[10,20,30,40,50][1,3,5]", "[10, 30, 50]"; "index by vector")]
+#[test_case("[10,20,30,40,50][5,4,3,2,1]", "[50, 40, 30, 20, 10]"; "index reverse")]
 #[test_case("1 in [1,2,3]", "1"; "in first")]
 #[test_case("2 in [1,2,3]", "2"; "in middle")]
 #[test_case("3 in [1,2,3]", "3"; "in last")]
@@ -528,22 +548,22 @@ fn vectors(input: &str, expexted: &str) {
 #[test_case("(5~10) - (1~3)", "2~9"; "interval sub")]
 #[test_case("(2~4) * (3~5)", "6~20"; "interval mul")]
 #[test_case("(10~20) / (2~5)", "2~10"; "interval div")]
-#[test_case("(10~20) % (3~3)", "1~2"; "interval mod singular")]
+#[test_case("(10~20) % (3~3)", "0~2.9999999999999996"; "interval mod singular")]
 #[test_case("(0~0) % (1~5)", "0~0"; "zero interval mod interval")]
 #[test_case("(0~0) % (3~3)", "0~0"; "zero interval mod singular")]
 #[test_case("(5~5) % (2~4)", "1~1"; "point dividend mod small interval")]
-#[test_case("(5~12) % (4~4)", "0~1"; "interval mod point divisor")]
-#[test_case("(10~25) % (7~7)", "3~4"; "interval mod point seven")]
+#[test_case("(5~12) % (4~4)", "0~3.9999999999999996"; "interval mod point divisor")]
+#[test_case("(10~25) % (7~7)", "0~6.999999999999999"; "interval mod point seven")]
 #[test_case("(1~3) % (10~20)", "1~3"; "small interval mod large unchanged")]
 #[test_case("(0~5) % (10~10)", "0~5"; "interval inside modulus")]
 #[test_case("(2~4) % (100~200)", "2~4"; "tiny interval mod huge unchanged")]
 #[test_case("(10~20) % (3~5)", "0~4.999999999999999"; "interval mod interval general")]
 #[test_case("(15~25) % (4~6)", "0~5.999999999999999"; "interval mod interval overlap")]
-#[test_case("(-10~-5) % (3~3)", "-2~-1"; "negative interval mod singular")]
-#[test_case("(-20~-10) % (7~7)", "-6~-3"; "negative interval mod point")]
-#[test_case("(-5~10) % (3~3)", "-2~1"; "spanning interval mod singular")]
+#[test_case("(-10~-5) % (3~3)", "-2.9999999999999996~0"; "negative interval mod singular")]
+#[test_case("(-20~-10) % (7~7)", "-6.999999999999999~0"; "negative interval mod point")]
+#[test_case("(-5~10) % (3~3)", "-2.9999999999999996~2.9999999999999996"; "spanning interval mod singular")]
 #[test_case("(-3~5) % (10~10)", "-3~5"; "spanning inside modulus unchanged")]
-#[test_case("(-10~15) % (7~7)", "-3~1"; "spanning interval mod point")]
+#[test_case("(-10~15) % (7~7)", "-6.999999999999999~6.999999999999999"; "spanning interval mod point")]
 #[test_case("(1~5) + 10", "11~15"; "interval add scalar")]
 #[test_case("10 + (1~5)", "11~15"; "scalar add interval")]
 #[test_case("(10~20) - 5", "5~15"; "interval sub scalar")]
@@ -626,3 +646,115 @@ fn intervals(input: &str, expexted: &str) {
     let result = eval_string(input, memory, funs).expect("unexpected error");
     assert_eq!(result.to_string(), expexted)
 }
+
+#[test]
+fn interval_positive_int_power() {
+    for (a, b) in &[(-10, 0), (-10, 10), (0, 10)] {
+        let vec = format!(
+            "[{}]",
+            (*a..=*b)
+                .into_iter()
+                .map(|x| x.to_string())
+                .collect::<Vec<String>>()
+                .join(", ")
+        );
+        for pow in 0..=10 {
+            let (memory, funs) = init();
+            let vector = eval_string(
+                &format!("({})^({})", vec, pow),
+                memory.clone(),
+                funs.clone(),
+            )
+            .unwrap();
+            let min_max = eval_string(
+                &format!("min({})~max({})", vector, vector),
+                memory.clone(),
+                funs.clone(),
+            )
+            .unwrap();
+            let interval = eval_string(
+                &format!("(({})~({}))^({})", a, b, pow),
+                memory.clone(),
+                funs.clone(),
+            )
+            .unwrap();
+            if eval_string(&format!("{} = {}", min_max, interval), memory, funs).is_err() {
+                panic!(
+                    "{}~{}^{} resulted in {} != {}",
+                    a, b, pow, min_max, interval
+                )
+            }
+        }
+    }
+
+    for (a, b) in &[(-10, -1), (1, 10)] {
+        let vec = format!(
+            "[{}]",
+            (*a..=*b)
+                .into_iter()
+                .map(|x| x.to_string())
+                .collect::<Vec<String>>()
+                .join(", ")
+        );
+        for pow in -10..=10 {
+            let (memory, funs) = init();
+            let vector = eval_string(
+                &format!("({})^({})", vec, pow),
+                memory.clone(),
+                funs.clone(),
+            )
+            .unwrap();
+            let min_max = eval_string(
+                &format!("min({})~max({})", vector, vector),
+                memory.clone(),
+                funs.clone(),
+            )
+            .unwrap();
+            let interval = eval_string(
+                &format!("(({})~({}))^({})", a, b, pow),
+                memory.clone(),
+                funs.clone(),
+            )
+            .unwrap();
+            if min_max != interval {
+                panic!(
+                    "{}~{}^{} resulted in {} != {}",
+                    a, b, pow, min_max, interval
+                )
+            }
+        }
+    }
+}
+
+// #[test]
+// fn interval_float_power() {
+//     let mut acc = Vec::new();
+//     let mut x = -10.0;
+//     while x <= 10.0 {
+//         acc.push(x);
+//         x += 0.01;
+//     }
+//     let vec = format!(
+//         "[{}]",
+//         acc.into_iter()
+//             .map(|x| x.to_string())
+//             .collect::<Vec<String>>()
+//             .join(", ")
+//     );
+//     for pow in 0..=10 {
+//         let (memory, funs) = init();
+//         let vector =
+//             eval_string(&format!("{}^{}", vec, pow), memory.clone(), funs.clone()).unwrap();
+//         let min_max = eval_string(
+//             &format!("min({})~max({})", vector, vector),
+//             memory.clone(),
+//             funs.clone(),
+//         )
+//         .unwrap();
+//         let interval =
+//             eval_string(&format!("((-10)~10)^{}", pow), memory.clone(), funs.clone()).unwrap();
+//         if eval_string(&format!("{} = {}", min_max, interval), memory, funs).is_err() {
+//             panic!("-10~10-^{} resulted in {} != {}", pow, min_max, interval)
+//         }
+//     }
+// }

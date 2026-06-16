@@ -9,7 +9,7 @@ use num::{
 };
 use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Interval {
     pub lower: Number,
     pub upper: Number,
@@ -38,12 +38,15 @@ impl Interval {
         if lhs.is_nan() || rhs.is_nan() || lhs > rhs {
             bail!("{} interval has invalid bounds", &this)
         }
+        if lhs.is_complex() || rhs.is_complex() {
+            bail!("bounds of an interval cannot be complex")
+        }
         Ok(this)
     }
 
     /// Create interval a~b ensuring that a <= b
     pub fn ordered(lhs: Number, rhs: Number) -> Interval {
-        if lhs.is_nan() || rhs.is_nan() {
+        if lhs.is_nan() || rhs.is_nan() || lhs.is_complex() || rhs.is_complex() {
             return Interval::NAN;
         }
         if &lhs <= &rhs {
@@ -71,6 +74,11 @@ impl Interval {
 
     pub fn is_one(&self) -> bool {
         self.lower.is_one() && self.upper.is_one()
+    }
+
+    /// The values in the interval are positive
+    pub fn is_positive(&self) -> bool {
+        self.lower.is_positive()
     }
 
     /// The values in the interval are negative
@@ -118,11 +126,8 @@ impl Interval {
         if self.is_nan() || k.is_nan() {
             return Interval::NAN;
         }
-        let pairs = self.cartesian(k, |a, b| a.choose(b));
-        Interval {
-            lower: pairs.iter().min().unwrap().clone(),
-            upper: pairs.iter().max().unwrap().clone(),
-        }
+        let (lower, upper) = self.min_max(k, |a, b| a.choose(b));
+        Interval { lower, upper }
     }
 
     /// Interval contains the value
@@ -133,14 +138,19 @@ impl Interval {
         &self.lower <= value && value <= &self.upper
     }
 
-    /// Function is applied to all the pairs of the interval bounds
-    pub fn cartesian(&self, other: &Interval, fun: fn(&Number, &Number) -> Number) -> Vec<Number> {
-        vec![
+    /// Min-max algorithm applies function to all the pairs of the interval bounds and returns min and max of the results
+    fn min_max(&self, other: &Interval, fun: fn(&Number, &Number) -> Number) -> (Number, Number) {
+        let cartesian = [
             fun(&self.lower, &other.lower),
             fun(&self.lower, &other.upper),
             fun(&self.upper, &other.lower),
             fun(&self.upper, &other.upper),
-        ]
+        ];
+        let start = (&cartesian[0], &cartesian[0]);
+        let (min, max) = cartesian[1..]
+            .iter()
+            .fold(start, |acc, e| (acc.0.min(e), acc.1.max(e)));
+        (min.clone(), max.clone())
     }
 
     pub fn idiv(&self, rhs: &Interval) -> Interval {
@@ -160,16 +170,14 @@ impl Interval {
             let a = self.lower.idiv(&rhs.lower);
             let b = self.lower.idiv(&rhs.upper);
             return Interval::ordered(a, b);
-        } else if rhs.is_singular() {
+        }
+        if rhs.is_singular() {
             let a = self.lower.idiv(&rhs.lower);
             let b = self.upper.idiv(&rhs.lower);
             return Interval::ordered(a, b);
         }
-        let pairs = self.cartesian(rhs, |a, b| a.idiv(b));
-        Interval {
-            lower: pairs.iter().min().unwrap().clone(),
-            upper: pairs.iter().max().unwrap().clone(),
-        }
+        let (lower, upper) = self.min_max(rhs, |a, b| a.idiv(b));
+        Interval { lower, upper }
     }
 }
 
@@ -224,16 +232,14 @@ impl Mul for &Interval {
             let a = self.lower.mul(&rhs.lower);
             let b = self.lower.mul(&rhs.upper);
             return Interval::ordered(a, b);
-        } else if rhs.is_singular() {
+        }
+        if rhs.is_singular() {
             let a = self.lower.mul(&rhs.lower);
             let b = self.upper.mul(&rhs.lower);
             return Interval::ordered(a, b);
         }
-        let pairs = self.cartesian(rhs, |a, b| a * b);
-        Interval {
-            lower: pairs.iter().min().unwrap().clone(),
-            upper: pairs.iter().max().unwrap().clone(),
-        }
+        let (lower, upper) = self.min_max(rhs, |a, b| a * b);
+        Interval { lower, upper }
     }
 }
 
@@ -257,16 +263,14 @@ impl Div for &Interval {
             let a = self.lower.div(&rhs.lower);
             let b = self.lower.div(&rhs.upper);
             return Interval::ordered(a, b);
-        } else if rhs.is_singular() {
+        }
+        if rhs.is_singular() {
             let a = self.lower.div(&rhs.lower);
             let b = self.upper.div(&rhs.lower);
             return Interval::ordered(a, b);
         }
-        let pairs = self.cartesian(rhs, |a, b| a / b);
-        Interval {
-            lower: pairs.iter().min().unwrap().clone(),
-            upper: pairs.iter().max().unwrap().clone(),
-        }
+        let (lower, upper) = self.min_max(rhs, |a, b| a / b);
+        Interval { lower, upper }
     }
 }
 
@@ -291,10 +295,6 @@ impl Rem for &Interval {
             let a = self.lower.rem(&rhs.lower);
             let b = self.lower.rem(&rhs.upper);
             return Interval::ordered(a, b);
-        } else if rhs.is_singular() {
-            let a = self.lower.rem(&rhs.lower);
-            let b = self.upper.rem(&rhs.lower);
-            return Interval::ordered(a, b);
         }
 
         let value = Interval::ordered(self.lower.abs(), self.upper.abs());
@@ -307,7 +307,15 @@ impl Rem for &Interval {
             // reminder applied
             let lower = if self.lower.is_negative() {
                 // the farthest we can get on the negative side
-                let almost_bound = Number::Float(modulus.upper.neg().to_f64().next_up().into());
+                let almost_bound = Number::Float(
+                    modulus
+                        .upper
+                        .neg()
+                        .to_f64()
+                        .unwrap_or(f64::NAN)
+                        .next_up()
+                        .into(),
+                );
                 self.lower.max(&almost_bound).clone()
             } else {
                 // both values are positive
@@ -318,7 +326,14 @@ impl Rem for &Interval {
                 Number::ZERO
             } else {
                 // the farthest we can get on the positive side
-                let almost_bound = Number::Float(modulus.upper.to_f64().next_down().into());
+                let almost_bound = Number::Float(
+                    modulus
+                        .upper
+                        .to_f64()
+                        .unwrap_or(f64::NAN)
+                        .next_down()
+                        .into(),
+                );
                 self.upper.min(&almost_bound).clone()
             };
             Interval { lower, upper }
@@ -349,25 +364,20 @@ impl Pow<&Interval> for &Interval {
             let a = self.lower.pow(&rhs.lower);
             let b = self.lower.pow(&rhs.upper);
             return Interval::ordered(a, b);
-        } else if rhs.is_singular() {
-            let a = self.lower.pow(&rhs.lower);
-            let b = self.upper.pow(&rhs.lower);
-            return Interval::ordered(a, b);
+        }
+        if rhs.is_singular() {
+            return self.pow(&rhs.lower);
         }
 
         // "Interval Arithmetic Specification" by Chiriaev et al (1998)
         // "The Extended Real Interval System" by Walster (1970)
-        if self.lower.is_positive() {
+        if self.is_positive() {
             // base is on the positive side
-            let pairs = self.cartesian(rhs, |a, b| a.pow(b));
-            Interval {
-                lower: pairs.iter().min().unwrap().clone(),
-                upper: pairs.iter().max().unwrap().clone(),
-            }
-        } else if self.upper.is_negative() {
+            let (lower, upper) = self.min_max(rhs, |a, b| a.pow(b));
+            Interval { lower, upper }
+        } else if self.is_negative() {
             // base is on the negative side
-            let pairs = self.neg().cartesian(rhs, |a, b| a.pow(b));
-            let upper = pairs.iter().max().unwrap().clone();
+            let (_, upper) = self.neg().min_max(rhs, |a, b| a.pow(b));
             Interval {
                 lower: upper.neg(),
                 upper,
@@ -390,9 +400,56 @@ impl Pow<&Interval> for &Interval {
         } else {
             // base can be anything, the exponent is negative
             // so it becomes 1/inf all the way to 1/-inf
-            Interval {
-                lower: Number::NEG_INFINITY,
-                upper: Number::INFINITY,
+            Interval::INFINITY
+        }
+    }
+}
+
+impl Pow<&Number> for &Interval {
+    type Output = Interval;
+
+    fn pow(self, rhs: &Number) -> Self::Output {
+        // TODO: the interval vs scalar exponents are inconsistent, e.g.
+        //  > (-2~2)^(3.1~3.2)
+        //  -9.18958683997628~9.18958683997628
+        //  > (-2~2)^(3.1)
+        //  NaN~NaN
+        if self.is_infinite() || rhs.is_infinite() {
+            return Interval::INFINITY;
+        }
+        if rhs.is_zero() {
+            return Interval {
+                lower: Number::Integer(BigInt::one()),
+                upper: Number::Integer(BigInt::one()),
+            };
+        }
+        if rhs.is_one() {
+            return self.clone();
+        }
+        // TODO: is this correct?
+        if self.is_negative() || self.is_positive() {
+            // base is either on the negative or positive side
+            let a = self.lower.pow(rhs);
+            let b = self.upper.pow(rhs);
+            Interval::ordered(a, b)
+        } else if rhs.is_even() {
+            // positive exponent, so result is on the positive side
+            let lower = Number::ZERO;
+            let upper = if rhs.is_negative() {
+                Number::INFINITY
+            } else {
+                let a = self.lower.pow(rhs);
+                let b = self.upper.pow(rhs);
+                a.max(&b).clone()
+            };
+            Interval { lower, upper }
+        } else {
+            if rhs.is_negative() {
+                Interval::INFINITY
+            } else {
+                let a = self.lower.pow(rhs);
+                let b = self.upper.pow(rhs);
+                Interval::ordered(a, b)
             }
         }
     }
@@ -444,11 +501,5 @@ impl std::cmp::Ord for &Interval {
 impl std::fmt::Display for Interval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}{}{}", self.lower, Op::Interval, self.upper)
-    }
-}
-
-impl std::fmt::Debug for Interval {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?} {} {:?}", self.lower, Op::Interval, self.upper)
     }
 }
