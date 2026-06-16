@@ -6,7 +6,7 @@ use crate::{
     vector,
 };
 use anyhow::{Result, anyhow, bail};
-use num::{BigInt, One};
+use num::traits::FromPrimitive;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra> {
@@ -215,9 +215,11 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                         if let Algebra::Number(ref n) = val
                             && let Number::Integer(n) = n
                         {
-                            let vals: Vec<Algebra> = std::iter::from_fn(|| Some(random()))
-                                .take(n.try_into()?)
-                                .collect();
+                            let Some(n) = usize::from_i128(*n) else {
+                                bail!("{} is not a number", val)
+                            };
+                            let vals: Vec<Algebra> =
+                                std::iter::from_fn(|| Some(random())).take(n).collect();
                             return Ok(Algebra::Vector(vals.into()));
                         }
                         bail!("{} is not a number", val)
@@ -318,7 +320,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
             }
             Apply(ref name, ref exprs) if name == "seq" => {
                 let step = match exprs.len() {
-                    2 => Number::Integer(BigInt::one()),
+                    2 => Number::Integer(1),
                     3 => eval_to_number(&exprs[2], memory.clone(), funs.clone())?,
                     _ => {
                         bail!("{} expected 2 or 3 arguments, got {}", name, exprs.len())
@@ -357,7 +359,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                     })
                 }
                 let val = eval(&exprs[0], memory, funs)?;
-                return Ok(val.map(|x| x.to_bigint().map(Number::Integer).unwrap_or(Number::NAN)));
+                return Ok(val.map(|x| x.to_i128().map(Number::Integer).unwrap_or(Number::NAN)));
             }
             Apply(ref name, ref exprs) if name == "float" => {
                 if exprs.len() != 1 {

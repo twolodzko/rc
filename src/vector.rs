@@ -1,6 +1,5 @@
 use crate::{Algebra, expr::Method, number::Number};
 use anyhow::Result;
-use num::{BigInt, One};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Vector(pub Vec<Algebra>);
@@ -73,9 +72,9 @@ impl Vector {
 
     pub fn prod(&self) -> Algebra {
         if self.is_empty() {
-            return Algebra::Number(Number::Integer(BigInt::one()));
+            return Algebra::Number(Number::Integer(1));
         }
-        let mut prod = Algebra::Number(Number::Integer(BigInt::one()));
+        let mut prod = Algebra::Number(Number::Integer(1));
         for v in &self.0 {
             prod = &prod * v;
         }

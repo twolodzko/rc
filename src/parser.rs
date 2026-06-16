@@ -5,7 +5,7 @@ use crate::{
 };
 use anyhow::{Result, bail};
 use core::f64;
-use num::{bigint::BigInt, complex::Complex};
+use num::complex::Complex;
 use pest::{
     Parser,
     iterators::{Pair, Pairs},
@@ -125,9 +125,7 @@ fn parse_expr(pairs: Pairs<Rule>) -> Result<Expr> {
                     Expr::Variable(ref n) if n == "e" => {
                         return Ok(Expr::Primitive(Method::Exp, Box::new(rhs)));
                     }
-                    Expr::Value(Algebra::Number(x))
-                        if x.to_bigint().is_some_and(|x| x == 2.into()) =>
-                    {
+                    Expr::Value(Algebra::Number(x)) if x.to_i128().is_some_and(|x| x == 2) => {
                         return Ok(Expr::Primitive(Method::Exp2, Box::new(rhs)));
                     }
                     _ => (),
@@ -238,7 +236,7 @@ fn parse_primary(primary: Pair<'_, Rule>) -> Result<Expr> {
         }
         Rule::float => {
             let s = primary.as_str();
-            let number = if let Ok(value) = BigInt::from_str(s) {
+            let number = if let Ok(value) = i128::from_str(s) {
                 Expr::Value(Algebra::Number(Number::Integer(value)))
             } else if let Ok(value) = f64::from_str(s) {
                 Expr::Value(Algebra::Number(Number::Float(value.into())))

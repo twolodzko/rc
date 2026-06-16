@@ -3,10 +3,7 @@ use crate::{
     number::Number,
 };
 use anyhow::{Result, bail};
-use num::{
-    BigInt,
-    traits::{One, Pow},
-};
+use num::traits::Pow;
 use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -353,8 +350,8 @@ impl Pow<&Interval> for &Interval {
         }
         if rhs.is_zero() {
             return Interval {
-                lower: Number::Integer(BigInt::one()),
-                upper: Number::Integer(BigInt::one()),
+                lower: Number::Integer(1),
+                upper: Number::Integer(1),
             };
         }
         if rhs.is_one() {
@@ -419,8 +416,8 @@ impl Pow<&Number> for &Interval {
         }
         if rhs.is_zero() {
             return Interval {
-                lower: Number::Integer(BigInt::one()),
-                upper: Number::Integer(BigInt::one()),
+                lower: Number::Integer(1),
+                upper: Number::Integer(1),
             };
         }
         if rhs.is_one() {

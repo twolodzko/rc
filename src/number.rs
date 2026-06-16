@@ -3,10 +3,9 @@ use Number::*;
 use anyhow::{Result, bail};
 use num::{
     Integer,
-    bigint::{BigInt, ToBigInt},
     complex::Complex,
     rational::Ratio,
-    traits::{Float, Inv, One, Pow, Signed, ToPrimitive, Zero},
+    traits::{Float, FromPrimitive, Inv, One, Pow, Signed, ToPrimitive, Zero},
 };
 use ordered_float::OrderedFloat;
 use std::{
@@ -16,8 +15,8 @@ use std::{
 
 #[derive(Clone, Debug)]
 pub enum Number {
-    Integer(BigInt),
-    Rational(Ratio<BigInt>),
+    Integer(i128),
+    Rational(Ratio<i128>),
     Float(OrderedFloat<f64>),
     Complex(Complex<f64>),
 }
@@ -71,7 +70,7 @@ impl Number {
     pub const NAN: Number = Float(OrderedFloat(f64::NAN));
     pub const INFINITY: Number = Float(OrderedFloat(f64::INFINITY));
     pub const NEG_INFINITY: Number = Float(OrderedFloat(f64::NEG_INFINITY));
-    pub const ZERO: Number = Integer(BigInt::ZERO);
+    pub const ZERO: Number = Integer(0i128);
     // common constants
     pub const PI: Number = Number::Float(OrderedFloat(std::f64::consts::PI));
     pub const E: Number = Number::Float(OrderedFloat(std::f64::consts::E));
@@ -183,7 +182,7 @@ impl Number {
 
     /// Number is an even integer
     pub fn is_even(&self) -> bool {
-        self.to_bigint().is_some_and(|x| x.is_even())
+        self.to_i128().is_some_and(|x| x.is_even())
     }
 
     pub fn is_complex(&self) -> bool {
@@ -213,12 +212,12 @@ impl Number {
     /// Cast number to rational if possible
     fn cast_to_rational(&self) -> Number {
         match self {
-            Integer(i) => Rational(Ratio::from_integer(i.clone())),
+            Integer(i) => Rational(Ratio::from_integer(*i)),
             Rational(_) => self.clone(),
-            Float(f) if let Some(r) = Ratio::from_float(f.0) => Rational(r),
+            Float(f) if let Some(r) = Ratio::from_f64(f.0) => Rational(r),
             Complex(c)
                 if let Some(f) = c.to_f64()
-                    && let Some(r) = Ratio::from_float(f) =>
+                    && let Some(r) = Ratio::from_f64(f) =>
             {
                 Rational(r)
             }
@@ -226,20 +225,20 @@ impl Number {
         }
     }
 
-    pub fn to_bigint(&self) -> Option<BigInt> {
+    pub fn to_i128(&self) -> Option<i128> {
         if !self.is_integerish() {
             return None;
         }
         match self {
-            Integer(x) => Some(x.clone()),
+            Integer(x) => Some(*x),
             Rational(x) => {
                 if !x.is_integer() {
                     return None;
                 }
                 Some(x.to_integer())
             }
-            Float(x) => x.to_i128().map(|i| i.into()),
-            Complex(x) => x.to_i128().map(|i| i.into()),
+            Float(x) => x.to_i128(),
+            Complex(x) => x.to_i128(),
         }
     }
 
@@ -293,12 +292,12 @@ impl Number {
         }
     }
 
-    fn powi(&self, rhs: &BigInt) -> Number {
+    fn powi(&self, rhs: &i128) -> Number {
         match self {
             Integer(x) => {
                 if let Ok(n) = TryInto::<u32>::try_into(rhs.abs()) {
                     if rhs.is_negative() {
-                        Rational(Ratio::new(BigInt::one(), x.pow(n)))
+                        Rational(Ratio::new(1, x.pow(n)))
                     } else {
                         Integer(x.pow(n))
                     }
@@ -309,7 +308,7 @@ impl Number {
                 }
             }
             Rational(x) => {
-                if let Ok(n) = TryInto::<i32>::try_into(rhs) {
+                if let Some(n) = i32::from_i128(*rhs) {
                     Rational(x.pow(n))
                 } else if let Some(rhs) = rhs.to_f64() {
                     self.powf(rhs)
@@ -318,7 +317,7 @@ impl Number {
                 }
             }
             Float(x) => {
-                if let Ok(n) = TryInto::<i32>::try_into(rhs) {
+                if let Some(n) = i32::from_i128(*rhs) {
                     Float(x.powi(n))
                 } else if let Some(rhs) = rhs.to_f64() {
                     self.powf(rhs)
@@ -327,7 +326,7 @@ impl Number {
                 }
             }
             Complex(x) => {
-                if let Ok(n) = TryInto::<i32>::try_into(rhs) {
+                if let Some(n) = i32::from_i128(*rhs) {
                     Complex(x.powi(n))
                 } else if let Some(rhs) = rhs.to_f64() {
                     Complex(x.powf(rhs))
@@ -342,7 +341,7 @@ impl Number {
         match self {
             Integer(_) => self.clone(),
             Rational(x) => Integer(x.floor().to_integer()),
-            Float(x) => x.floor().to_bigint().map(Integer).unwrap_or(Number::NAN),
+            Float(x) => x.floor().to_i128().map(Integer).unwrap_or(Number::NAN),
             Complex(x) => num::Complex::new(x.re.floor(), x.im.floor()).into(),
         }
     }
@@ -351,7 +350,7 @@ impl Number {
         match self {
             Integer(_) => self.clone(),
             Rational(x) => Integer(x.ceil().to_integer()),
-            Float(x) => x.ceil().to_bigint().map(Integer).unwrap_or(Number::NAN),
+            Float(x) => x.ceil().to_i128().map(Integer).unwrap_or(Number::NAN),
             Complex(x) => num::Complex::new(x.re.ceil(), x.im.ceil()).into(),
         }
     }
@@ -360,7 +359,7 @@ impl Number {
         match self {
             Integer(_) => self.clone(),
             Rational(x) => Integer(x.round().to_integer()),
-            Float(x) => x.round().to_bigint().map(Integer).unwrap_or(Number::NAN),
+            Float(x) => x.round().to_i128().map(Integer).unwrap_or(Number::NAN),
             Complex(x) => num::Complex::new(x.re.round(), x.im.round()).into(),
         }
     }
@@ -369,7 +368,7 @@ impl Number {
         match self {
             Integer(_) => self.clone(),
             Rational(x) => Integer(x.trunc().to_integer()),
-            Float(x) => x.trunc().to_bigint().map(Integer).unwrap_or(Number::NAN),
+            Float(x) => x.trunc().to_i128().map(Integer).unwrap_or(Number::NAN),
             Complex(x) => num::Complex::new(x.re.trunc(), x.im.trunc()).into(),
         }
     }
@@ -385,50 +384,50 @@ impl Number {
     }
 
     fn factorial(&self) -> Number {
-        let Some(n) = self.to_bigint() else {
+        let Some(n) = self.to_i128() else {
             return Number::NAN;
         };
         if n.is_negative() {
             return Number::NAN;
         }
         if self.is_one() || self.is_zero() {
-            return Integer(BigInt::one());
+            return Integer(1);
         }
 
-        fn recfact(start: &BigInt, n: &BigInt) -> BigInt {
+        fn recfact(start: i128, n: i128) -> Option<i128> {
             // The "just use BigInt library" algorithm from:
             // http://www.luschny.de/math/factorial/FastFactorialFunctions.htm
-            if n <= &16.into() {
-                let mut r = start.clone();
+            if n <= 16 {
+                let mut r = start;
                 for i in num::iter::range(start + 1, start + n) {
                     r *= i;
                 }
-                return r;
+                return Some(r);
             }
             let i = n / 2;
-            let start2 = start + &i;
-            let i2 = n - &i;
-            recfact(start, &i) * recfact(&start2, &i2)
+            let start2 = start + i;
+            let i2 = n - i;
+            recfact(start, i)?.checked_mul(recfact(start2, i2)?)
         }
-        Integer(recfact(&BigInt::one(), &n))
+        recfact(1, n).map(Integer).unwrap_or(Number::NAN)
     }
 
     pub fn choose(&self, k: &Number) -> Number {
-        let Some(n) = self.to_bigint() else {
+        let Some(n) = self.to_i128() else {
             return Number::NAN;
         };
-        let Some(k) = k.to_bigint() else {
+        let Some(k) = k.to_i128() else {
             return Number::NAN;
         };
         if k < 0.into() || n < k {
             return Number::NAN;
         }
         // see: https://en.wikipedia.org/wiki/Binomial_coefficient#Multiplicative_formula
-        let mut acc = Ratio::from_integer(BigInt::one());
-        for i in num::iter::range_inclusive(BigInt::one(), k) {
+        let mut acc = Ratio::from_integer(1);
+        for i in num::iter::range_inclusive(1, k) {
             // (n+1-i)/i
-            let numer = &n + &BigInt::one() - &i;
-            acc *= Ratio::new(numer.clone(), i.clone());
+            let numer = n + 1 - i;
+            acc *= Ratio::new(numer, i);
         }
         Integer(acc.to_integer())
     }
@@ -442,7 +441,7 @@ impl Number {
     }
 
     /// Compute x^(1/n)
-    fn nth_root(&self, n: &BigInt) -> Number {
+    fn nth_root(&self, n: i128) -> Number {
         // https://math.stackexchange.com/a/1608619
         if let Complex(x) = self {
             complex_nth_root(x, n).into()
@@ -454,10 +453,10 @@ impl Number {
     }
 }
 
-fn complex_nth_root(x: &num::Complex<f64>, n: &BigInt) -> num::Complex<f64> {
-    if n == &BigInt::from(2) {
+fn complex_nth_root(x: &num::Complex<f64>, n: i128) -> num::Complex<f64> {
+    if n == 2 {
         x.sqrt()
-    } else if n == &BigInt::from(3) {
+    } else if n == 3 {
         x.cbrt()
     } else if let Some(n) = n.to_f64() {
         x.powf(n.inv())
@@ -466,10 +465,10 @@ fn complex_nth_root(x: &num::Complex<f64>, n: &BigInt) -> num::Complex<f64> {
     }
 }
 
-fn f64_nth_root(x: f64, n: &BigInt) -> f64 {
-    if n == &BigInt::from(2) {
+fn f64_nth_root(x: f64, n: i128) -> f64 {
+    if n == 2 {
         x.sqrt()
-    } else if n == &BigInt::from(3) {
+    } else if n == 3 {
         x.cbrt()
     } else if let Some(n) = n.to_f64() {
         x.powf(n.inv())
@@ -483,13 +482,13 @@ fn to_rat(f: f64) -> Number {
     if f.is_nan() || f.is_infinite() {
         return Number::NAN;
     }
-    if let Some(r) = Ratio::from_float(f) {
+    if let Some(r) = Ratio::from_f64(f) {
         return Rational(r);
     }
     let (mantissa, exponent, sign) = f.integer_decode();
     let sign = Ratio::from_integer(sign.into());
     let mantissa = Ratio::from_integer(mantissa.into());
-    let base = Ratio::from_integer(BigInt::from(2));
+    let base = Ratio::from_integer(2);
     Rational(sign * mantissa * base.pow(exponent as i32))
 }
 
@@ -561,7 +560,7 @@ impl Div for &Number {
             return rhs.inv();
         }
         match (self, rhs) {
-            (Integer(n), Integer(d)) => Rational(Ratio::new(n.clone(), d.clone())),
+            (Integer(n), Integer(d)) => Rational(Ratio::new(*n, *d)),
             (a, b) => op!(a, div, b),
         }
     }
@@ -572,7 +571,7 @@ impl Pow<&Number> for &Number {
 
     fn pow(self, rhs: &Number) -> Number {
         if rhs.is_zero() {
-            return Integer(BigInt::one());
+            return Integer(1);
         }
         if rhs.is_one() {
             return self.clone();
@@ -596,10 +595,10 @@ impl Pow<&Number> for &Number {
                 let xm = self.powi(m);
                 if unsafe { COMPLEX } && xm.is_negative() && n.is_even() {
                     xm.to_complex()
-                        .map(|ref xm| complex_nth_root(xm, n).into())
+                        .map(|ref xm| complex_nth_root(xm, *n).into())
                         .unwrap_or(Number::NAN)
                 } else {
-                    xm.nth_root(n)
+                    xm.nth_root(*n)
                 }
             }
             // complex powers
@@ -634,7 +633,7 @@ impl Inv for &Number {
 
     fn inv(self) -> Self::Output {
         match self {
-            Integer(x) => Rational(Ratio::new(BigInt::one(), x.clone())),
+            Integer(x) => Rational(Ratio::new(1, *x)),
             Rational(x) => Rational(x.inv()),
             Float(x) => Float(x.recip()),
             Complex(x) => Complex(x.inv()),
@@ -683,9 +682,15 @@ impl From<f64> for Number {
     }
 }
 
+impl From<i128> for Number {
+    fn from(value: i128) -> Self {
+        Number::Integer(value)
+    }
+}
+
 impl From<usize> for Number {
     fn from(value: usize) -> Self {
-        Number::Integer(value.into())
+        value.try_into().map(Number::Integer).unwrap_or(Number::NAN)
     }
 }
 
