@@ -364,6 +364,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                     bail!("{} is not callable", &exprs[1])
                 };
                 let fun = |x: Algebra| {
+                    // TODO: what about primitives?
                     eval(
                         &Expr::Apply(fun_name.to_string(), vec![Expr::Value(x)]),
                         memory.clone(),

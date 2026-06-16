@@ -8,6 +8,7 @@ pub struct Vector(pub Vec<Algebra>);
 impl Vector {
     pub fn primitive(&self, method: Method) -> Result<Vector> {
         let vals = self
+            .0
             .iter()
             .map(|v| v.primitive(method))
             .collect::<Result<Vec<Algebra>>>()?;
@@ -15,7 +16,7 @@ impl Vector {
     }
 
     pub fn map(&self, fun: impl Fn(&Algebra) -> Algebra) -> Vector {
-        Vector(self.iter().map(fun).collect())
+        Vector(self.0.iter().map(fun).collect())
     }
 
     pub fn zip_map(&self, rhs: &Vector, fun: fn((&Algebra, &Algebra)) -> Algebra) -> Vector {
@@ -28,24 +29,20 @@ impl Vector {
     ) -> impl Iterator<Item = (&'a Algebra, &'b Algebra)> {
         let ord = self.len().cmp(&rhs.len());
         let lhs: Box<dyn Iterator<Item = &Algebra>> = if ord == std::cmp::Ordering::Less {
-            Box::new(self.iter().cycle())
+            Box::new(self.0.iter().cycle())
         } else {
-            Box::new(self.iter())
+            Box::new(self.0.iter())
         };
         let rhs: Box<dyn Iterator<Item = &Algebra>> = if ord == std::cmp::Ordering::Greater {
-            Box::new(rhs.iter().cycle())
+            Box::new(rhs.0.iter().cycle())
         } else {
-            Box::new(rhs.iter())
+            Box::new(rhs.0.iter())
         };
         std::iter::zip(lhs, rhs)
     }
 
     pub fn all(&self, fun: impl Fn(&Algebra) -> bool) -> bool {
-        self.iter().all(fun)
-    }
-
-    pub fn iter(&self) -> core::slice::Iter<'_, Algebra> {
-        self.0.iter()
+        self.0.iter().all(fun)
     }
 
     pub fn dot(&self, rhs: &Vector) -> Algebra {
@@ -56,11 +53,11 @@ impl Vector {
     }
 
     pub fn min(&self) -> Algebra {
-        self.iter().min().cloned().unwrap_or(Algebra::NAN)
+        self.0.iter().min().cloned().unwrap_or(Algebra::NAN)
     }
 
     pub fn max(&self) -> Algebra {
-        self.iter().max().cloned().unwrap_or(Algebra::NAN)
+        self.0.iter().max().cloned().unwrap_or(Algebra::NAN)
     }
 
     pub fn sum(&self) -> Algebra {
@@ -103,6 +100,7 @@ impl From<Vec<Algebra>> for Vector {
 impl std::fmt::Display for Vector {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let vals = self
+            .0
             .iter()
             .map(ToString::to_string)
             .collect::<Vec<_>>()
