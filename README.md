@@ -12,7 +12,7 @@ types:
 * 64-bit floating point numbers represented by [`OrderedFloat<f64>`][f64] in Rust.
 * Complex numbers represented by [`Complex<f64>`][complex].
 
-Complex numbers are available when using `--complex` flag. When activated, complex numbers,
+Complex numbers are available when using `--complex` flag. When activated, 
 primitives such as `sqrt`, `ln`, `log2`, and `log10`, will return complex results
 for negative numbers (instead of NaN's), same for non-even powers of negative numbers.
 
