@@ -479,7 +479,6 @@ fn numbers(input: &str, expexted: &str) {
 #[test_case("1 in [1,2,3]", "1"; "in first")]
 #[test_case("2 in [1,2,3]", "2"; "in middle")]
 #[test_case("3 in [1,2,3]", "3"; "in last")]
-#[test_case("[] = []", "[]"; "empty equal empty")]
 #[test_case("[1,2,3] = [1,2,3]", "[1, 2, 3]"; "equal vectors")]
 #[test_case("[1,2] < [2,3]", "[2, 3]"; "vector less than vector")]
 #[test_case("[2,3] > [1,2]", "[1, 2]"; "vector greater than vector")]
@@ -495,6 +494,8 @@ fn numbers(input: &str, expexted: &str) {
 #[test_case("push([], 1)", "[1]"; "push to empty")]
 #[test_case("push([1], 2)", "[1, 2]"; "push to singleton")]
 #[test_case("push([1,2], 3, 4, 5)", "[1, 2, 3, 4, 5]"; "push multiple")]
+#[test_case("[] = []", "[]"; "empty equal empty")]
+#[test_case("[1,2,3] = [1,1+1,1+1+1]", "[1, 2, 3]"; "empty vectors are equal")]
 fn vectors(input: &str, expexted: &str) {
     let (memory, funs) = init();
     let result = eval_string(input, memory, funs).expect("unexpected error");
@@ -722,6 +723,7 @@ fn interval_positive_int_power() {
 #[test_case("1/2 ?= 0.5"; "rational and float have different types")]
 #[test_case("error()"; "empty error")]
 #[test_case("[1,1,1] = 1"; "equal for vector is exact")]
+#[test_case("[1,2,1,2] = [1,2]"; "repeated vectors are not equal")]
 fn expect_error(input: &str) {
     let (memory, funs) = init();
     assert!(eval_string(input, memory, funs).is_err())
