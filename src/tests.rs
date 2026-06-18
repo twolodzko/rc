@@ -210,44 +210,6 @@ fn complex(input: &str, expexted: &str) {
     assert_eq!(result.to_string(), expexted)
 }
 
-#[test_case("1=2"; "equality")]
-#[test_case("1!=1"; "not equal fails")]
-#[test_case("5<5"; "less than fails")]
-#[test_case("10>20"; "more than fails")]
-#[test_case("100>20<3"; "inequality")]
-#[test_case("1=1 and 1=2"; "rhs for and fails")]
-#[test_case("1=2 and 1=1"; "lhs for and fails")]
-#[test_case("1=2 or 1>2"; "rhs for or fails")]
-#[test_case("sqrt(1,2,3,4,5)"; "too many arguments for primitive")]
-#[test_case("fun f(x) x; f(1,2,3,4)"; "too many arguments for fun")]
-#[test_case("if 1=1 then 42"; "if without else")]
-#[test_case("load(wrong/file/name)"; "load non-existent file")]
-#[test_case("x"; "uninitialized variable")]
-#[test_case("x=1;x=2"; "unification failed")]
-#[test_case("global=1; fun f(local) global; f(2)"; "global variable from function")]
-#[test_case("fun f(x,y) x; f(1)"; "too few arguments")]
-#[test_case("min"; "function call without parentheses")]
-#[test_case("fun f(x) y; f(1)"; "undefined variable in function")]
-#[test_case("rand(1,2,3)"; "rand with arguments")]
-#[test_case("choose(1)"; "choose with one argument")]
-#[test_case("choose(1,2,3)"; "choose with three arguments")]
-#[test_case("fun f(x) x; f"; "function without call")]
-#[test_case("unknownfunc(42)"; "unknown function call")]
-#[test_case("-2 in 1~5"; "negative in interval assertion")]
-#[test_case("20 in [1,5,10]"; "negative in vector assertion")]
-#[test_case("2[1]"; "extract from invalid lhs")]
-#[test_case("[][0]"; "zero index")]
-#[test_case("[1,2,3][-5]"; "negative index")]
-#[test_case("1 ?= 11~22"; "integer and interval have different types")]
-#[test_case("[] ?= 11~22"; "list and interval have different types")]
-#[test_case("1 ?= 5.0"; "integer and float have different types")]
-#[test_case("1/2 ?= 0.5"; "rational and float have different types")]
-#[test_case("error()"; "empty error")]
-fn expect_error(input: &str) {
-    let (memory, funs) = init();
-    assert!(eval_string(input, memory, funs).is_err())
-}
-
 #[test_case("2 + 3", "5"; "int add")]
 #[test_case("2.0 + 3.0", "5"; "float add")]
 #[test_case("2/1 + 3/1", "5"; "rational add")]
@@ -724,6 +686,45 @@ fn interval_positive_int_power() {
             }
         }
     }
+}
+
+#[test_case("1=2"; "equality")]
+#[test_case("1!=1"; "not equal fails")]
+#[test_case("5<5"; "less than fails")]
+#[test_case("10>20"; "more than fails")]
+#[test_case("100>20<3"; "inequality")]
+#[test_case("1=1 and 1=2"; "rhs for and fails")]
+#[test_case("1=2 and 1=1"; "lhs for and fails")]
+#[test_case("1=2 or 1>2"; "rhs for or fails")]
+#[test_case("sqrt(1,2,3,4,5)"; "too many arguments for primitive")]
+#[test_case("fun f(x) x; f(1,2,3,4)"; "too many arguments for fun")]
+#[test_case("if 1=1 then 42"; "if without else")]
+#[test_case("load(wrong/file/name)"; "load non-existent file")]
+#[test_case("x"; "uninitialized variable")]
+#[test_case("x=1;x=2"; "unification failed")]
+#[test_case("global=1; fun f(local) global; f(2)"; "global variable from function")]
+#[test_case("fun f(x,y) x; f(1)"; "too few arguments")]
+#[test_case("min"; "function call without parentheses")]
+#[test_case("fun f(x) y; f(1)"; "undefined variable in function")]
+#[test_case("rand(1,2,3)"; "rand with arguments")]
+#[test_case("choose(1)"; "choose with one argument")]
+#[test_case("choose(1,2,3)"; "choose with three arguments")]
+#[test_case("fun f(x) x; f"; "function without call")]
+#[test_case("unknownfunc(42)"; "unknown function call")]
+#[test_case("-2 in 1~5"; "negative in interval assertion")]
+#[test_case("20 in [1,5,10]"; "negative in vector assertion")]
+#[test_case("2[1]"; "extract from invalid lhs")]
+#[test_case("[][0]"; "zero index")]
+#[test_case("[1,2,3][-5]"; "negative index")]
+#[test_case("1 ?= 11~22"; "integer and interval have different types")]
+#[test_case("[] ?= 11~22"; "list and interval have different types")]
+#[test_case("1 ?= 5.0"; "integer and float have different types")]
+#[test_case("1/2 ?= 0.5"; "rational and float have different types")]
+#[test_case("error()"; "empty error")]
+#[test_case("[1,1,1] = 1"; "equal for vector is exact")]
+fn expect_error(input: &str) {
+    let (memory, funs) = init();
+    assert!(eval_string(input, memory, funs).is_err())
 }
 
 // #[test]
