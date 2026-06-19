@@ -1,4 +1,5 @@
 use crate::{
+    IntDiv,
     expr::{Method, Op},
     number::Number,
 };
@@ -151,33 +152,6 @@ impl Interval {
             .iter()
             .fold(start, |acc, e| (acc.0.min(e), acc.1.max(e)));
         (min.clone(), max.clone())
-    }
-
-    pub fn idiv(&self, rhs: &Interval) -> Interval {
-        if self.is_infinite() || rhs.is_infinite() {
-            return Interval::INFINITY;
-        }
-        if self.is_nan() || rhs.is_nan() {
-            return Interval::NAN;
-        }
-        if self.is_zero() {
-            return Interval::ZERO;
-        }
-        if rhs.is_zero() {
-            return Interval::NAN;
-        }
-        if self.is_singular() {
-            let a = self.lower.idiv(&rhs.lower);
-            let b = self.lower.idiv(&rhs.upper);
-            return Interval::ordered(a, b);
-        }
-        if rhs.is_singular() {
-            let a = self.lower.idiv(&rhs.lower);
-            let b = self.upper.idiv(&rhs.lower);
-            return Interval::ordered(a, b);
-        }
-        let (lower, upper) = self.min_max(rhs, |a, b| a.idiv(b));
-        Interval { lower, upper }
     }
 }
 
@@ -452,6 +426,37 @@ impl Pow<&Number> for &Interval {
                 Interval::ordered(a, b)
             }
         }
+    }
+}
+
+impl IntDiv for &Interval {
+    type Output = Interval;
+
+    fn idiv(self, rhs: &Interval) -> Self::Output {
+        if self.is_infinite() || rhs.is_infinite() {
+            return Interval::INFINITY;
+        }
+        if self.is_nan() || rhs.is_nan() {
+            return Interval::NAN;
+        }
+        if self.is_zero() {
+            return Interval::ZERO;
+        }
+        if rhs.is_zero() {
+            return Interval::NAN;
+        }
+        if self.is_singular() {
+            let a = self.lower.idiv(&rhs.lower);
+            let b = self.lower.idiv(&rhs.upper);
+            return Interval::ordered(a, b);
+        }
+        if rhs.is_singular() {
+            let a = self.lower.idiv(&rhs.lower);
+            let b = self.upper.idiv(&rhs.lower);
+            return Interval::ordered(a, b);
+        }
+        let (lower, upper) = self.min_max(rhs, |a, b| a.idiv(b));
+        Interval { lower, upper }
     }
 }
 

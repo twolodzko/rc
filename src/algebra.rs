@@ -1,4 +1,5 @@
 use crate::{
+    IntDiv,
     expr::{Method, Op},
     interval, number, vector,
 };
@@ -167,10 +168,6 @@ impl Algebra {
     pub fn choose(&self, other: &Algebra) -> Algebra {
         apply!(self, choose, other)
     }
-
-    pub fn idiv(&self, other: &Algebra) -> Algebra {
-        apply!(self, idiv, other)
-    }
 }
 
 impl Add for &Algebra {
@@ -258,6 +255,14 @@ impl Pow<&Algebra> for &Algebra {
             (_, Vector(b)) => Vector(b.map(|x| self.pow(x))),
             (Vector(a), _) => Vector(a.map(|x| x.pow(rhs))),
         }
+    }
+}
+
+impl IntDiv for &Algebra {
+    type Output = Algebra;
+
+    fn idiv(self, other: &Algebra) -> Algebra {
+        apply!(self, idiv, other)
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::{COMPLEX, PRINT_AS_FLOAT, SCALE, expr::Method};
+use crate::{COMPLEX, IntDiv, PRINT_AS_FLOAT, SCALE, expr::Method};
 use Number::*;
 use anyhow::{Result, bail};
 use num::{
@@ -374,16 +374,6 @@ impl Number {
         }
     }
 
-    pub fn idiv(&self, rhs: &Number) -> Number {
-        if rhs.is_zero() {
-            return Number::NAN;
-        }
-        match (self, rhs) {
-            (Integer(a), Integer(b)) => Integer(a / b),
-            _ => (self / rhs).trunc(),
-        }
-    }
-
     fn factorial(&self) -> Number {
         let Some(n) = self.to_bigint() else {
             return Number::NAN;
@@ -612,6 +602,20 @@ impl Pow<&Number> for &Number {
             // float powers
             (_, Float(rhs)) if *rhs == 0.5 => self.sqrt(),
             _ => rhs.to_f64().map(|x| self.powf(x)).unwrap_or(Number::NAN),
+        }
+    }
+}
+
+impl IntDiv for &Number {
+    type Output = Number;
+
+    fn idiv(self, rhs: &Number) -> Self::Output {
+        if rhs.is_zero() {
+            return Number::NAN;
+        }
+        match (self, rhs) {
+            (Integer(a), Integer(b)) => Integer(a / b),
+            _ => (self / rhs).trunc(),
         }
     }
 }

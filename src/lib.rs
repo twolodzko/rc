@@ -95,3 +95,9 @@ impl std::fmt::Display for AssertionError {
         write!(f, "assertion {} failed", self.0)
     }
 }
+
+pub trait IntDiv<Rhs = Self> {
+    type Output;
+    /// Floor division defined as `(self / rhs).trunc()`
+    fn idiv(self, rhs: Rhs) -> Self::Output;
+}
