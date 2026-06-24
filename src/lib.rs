@@ -42,6 +42,14 @@ where
     rug::Complex::with_val(unsafe { PRECISION }, value)
 }
 
+pub fn ratio_to_integer(value: rug::Rational) -> Option<rug::Integer> {
+    if value.is_integer() {
+        debug_assert_eq!(*value.denom(), 1);
+        return Some(value.numer().clone());
+    }
+    None
+}
+
 #[derive(Debug, Clone)]
 pub enum Template {
     Field(Expr),

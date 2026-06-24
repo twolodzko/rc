@@ -1,5 +1,5 @@
 use crate::{
-    Algebra, ArityError, COMPLEX, PRECISION, Template,
+    Algebra, ArityError, COMPLEX, Template,
     expr::{Expr, Function, Method, Op},
     number::Number,
     to_complex, to_float,
@@ -174,7 +174,6 @@ fn parse_primary(primary: Pair<'_, Rule>) -> Result<Expr> {
                 "asinh" => Method::Asinh,
                 "atan" => Method::Atan,
                 "atanh" => Method::Atanh,
-                "cbrt" => Method::Cbrt,
                 "ceil" => Method::Ceil,
                 "cos" => Method::Cos,
                 "cosh" => Method::Cosh,

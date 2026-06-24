@@ -1,12 +1,11 @@
 use crate::{
-    Algebra, ArityError, AssertionError, Functions, Memory, PRECISION, Template, eval_file,
+    Algebra, ArityError, AssertionError, Functions, Memory, Template, eval_file,
     expr::{Expr, Function, Op},
     interval::Interval,
     number::Number,
     to_complex, to_float, vector,
 };
 use anyhow::{Result, anyhow, bail};
-use core::f64;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra> {

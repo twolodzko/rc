@@ -66,8 +66,8 @@ impl Interval {
     }
 
     pub fn primitive(&self, method: Method) -> Result<Interval> {
-        let lhs = self.lower.primitive(method)?;
-        let rhs = self.upper.primitive(method)?;
+        let lhs = self.lower.clone().primitive(method)?;
+        let rhs = self.upper.clone().primitive(method)?;
         Ok(Interval::ordered(lhs, rhs))
     }
 
@@ -205,13 +205,13 @@ impl Mul for &Interval {
             return Interval::ZERO;
         }
         if self.is_singular() {
-            let a = self.lower.mul(&rhs.lower);
-            let b = self.lower.mul(&rhs.upper);
+            let a = &self.lower * &rhs.lower;
+            let b = &self.lower * &rhs.upper;
             return Interval::ordered(a, b);
         }
         if rhs.is_singular() {
-            let a = self.lower.mul(&rhs.lower);
-            let b = self.upper.mul(&rhs.lower);
+            let a = &self.lower * &rhs.lower;
+            let b = &self.upper * &rhs.lower;
             return Interval::ordered(a, b);
         }
         let (lower, upper) = self.min_max(rhs, |a, b| a * b);
@@ -236,13 +236,13 @@ impl Div for &Interval {
             return Interval::nan();
         }
         if self.is_singular() {
-            let a = self.lower.div(&rhs.lower);
-            let b = self.lower.div(&rhs.upper);
+            let a = &self.lower / &rhs.lower;
+            let b = &self.lower / &rhs.upper;
             return Interval::ordered(a, b);
         }
         if rhs.is_singular() {
-            let a = self.lower.div(&rhs.lower);
-            let b = self.upper.div(&rhs.lower);
+            let a = &self.lower / &rhs.lower;
+            let b = &self.upper / &rhs.lower;
             return Interval::ordered(a, b);
         }
         let (lower, upper) = self.min_max(rhs, |a, b| a / b);
@@ -268,13 +268,13 @@ impl Rem for &Interval {
             return Interval::nan();
         }
         if self.is_singular() {
-            let a = self.lower.rem(&rhs.lower);
-            let b = self.lower.rem(&rhs.upper);
+            let a = &self.lower % &rhs.lower;
+            let b = &self.lower % &rhs.upper;
             return Interval::ordered(a, b);
         }
 
-        let value = Interval::ordered(self.lower.abs(), self.upper.abs());
-        let modulus = Interval::ordered(rhs.lower.abs(), rhs.upper.abs());
+        let value = Interval::ordered(self.lower.clone().abs(), self.upper.clone().abs());
+        let modulus = Interval::ordered(rhs.lower.clone().abs(), rhs.upper.clone().abs());
 
         if &value.upper < &modulus.lower {
             // inside the bounds
@@ -283,15 +283,16 @@ impl Rem for &Interval {
             // reminder applied
             let lower = if self.lower.is_negative() {
                 // the farthest we can get on the negative side
-                let almost_bound = Number::Float(
-                    modulus
-                        .upper
-                        .neg()
-                        .to_float()
-                        .unwrap_or(f64::NAN)
-                        .next_up()
-                        .into(),
-                );
+                let almost_bound = modulus
+                    .upper
+                    .clone()
+                    .neg()
+                    .to_float()
+                    .map(|mut x| {
+                        x.next_up();
+                        Number::Float(x)
+                    })
+                    .unwrap_or_default();
                 self.lower.max(&almost_bound).clone()
             } else {
                 // both values are positive
@@ -302,14 +303,14 @@ impl Rem for &Interval {
                 Number::ZERO
             } else {
                 // the farthest we can get on the positive side
-                let almost_bound = Number::Float(
-                    modulus
-                        .upper
-                        .to_float()
-                        .unwrap_or(f64::NAN)
-                        .next_down()
-                        .into(),
-                );
+                let almost_bound = modulus
+                    .upper
+                    .to_float()
+                    .map(|mut x| {
+                        x.next_down();
+                        Number::Float(x)
+                    })
+                    .unwrap_or_default();
                 self.upper.min(&almost_bound).clone()
             };
             Interval { lower, upper }
@@ -355,19 +356,21 @@ impl Pow<&Interval> for &Interval {
             // base is on the negative side
             let (_, upper) = self.neg().min_max(rhs, |a, b| a.pow(b));
             Interval {
-                lower: upper.neg(),
+                lower: upper.clone().neg(),
                 upper,
             }
         } else if !rhs.lower.is_negative() {
             // base interval crosses zero, the exponent is non-negative
             let lower = self
                 .lower
+                .clone()
                 .neg()
                 .pow(&rhs.lower)
                 .neg()
-                .min(&self.lower.neg().pow(&rhs.upper).neg())
+                .min(&self.lower.clone().neg().pow(&rhs.upper).neg())
                 .clone();
             let upper = lower
+                .clone()
                 .neg()
                 .max(&self.upper.pow(&rhs.lower))
                 .max(&self.upper.pow(&rhs.upper))

@@ -130,7 +130,7 @@ impl Algebra {
 
     pub fn primitive(&self, method: Method) -> Result<Algebra> {
         let val = match self {
-            Number(x) => Number(x.primitive(method)?),
+            Number(x) => Number(x.clone().primitive(method)?),
             Interval(x) => Interval(x.primitive(method)?),
             Vector(x) => Vector(x.primitive(method)?),
         };

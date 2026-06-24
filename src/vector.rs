@@ -52,11 +52,11 @@ impl Vector {
     }
 
     pub fn min(&self) -> Algebra {
-        self.0.iter().min().cloned().unwrap_or(Algebra::NAN)
+        self.0.iter().min().cloned().unwrap_or(Algebra::nan())
     }
 
     pub fn max(&self) -> Algebra {
-        self.0.iter().max().cloned().unwrap_or(Algebra::NAN)
+        self.0.iter().max().cloned().unwrap_or(Algebra::nan())
     }
 
     pub fn sum(&self) -> Algebra {
@@ -65,7 +65,7 @@ impl Vector {
         }
         let mut sum = Algebra::Number(Number::ZERO);
         for v in &self.0 {
-            sum = sum + v;
+            sum = &sum + &v;
         }
         sum
     }
@@ -76,7 +76,7 @@ impl Vector {
         }
         let mut prod = Algebra::Number(Number::ONE);
         for v in &self.0 {
-            prod = prod * v;
+            prod = &prod * &v;
         }
         prod
     }

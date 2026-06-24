@@ -1,7 +1,8 @@
 use anyhow::{Result, bail};
 use clap::Parser;
 use rc::{
-    AssertionError, COMPLEX, Functions, Memory, PRINT_AS_FLOAT, SCALE, eval_file, eval_string, init,
+    AssertionError, COMPLEX, Functions, Memory, PRECISION, PRINT_AS_FLOAT, SCALE, eval_file,
+    eval_string, init,
 };
 use rustyline::{Config, DefaultEditor, error::ReadlineError};
 use std::path::PathBuf;
@@ -87,6 +88,10 @@ struct Args {
     #[arg(long, env = "RC_PRINT_AS_FLOAT")]
     print_as_float: bool,
 
+    /// Precision of floating point and complex numbers
+    #[arg(long, short, env = "RC_FLOAT_PRECISION", default_v = 64)]
+    precision: u32,
+
     /// Don't print the result except when explicitly using print()
     #[arg(long, short, env = "RC_QUIET")]
     quiet: bool,
@@ -117,6 +122,7 @@ fn main() {
         SCALE = args.scale;
         PRINT_AS_FLOAT = args.print_as_float;
         COMPLEX = args.complex;
+        PRECISION = args.precision;
     }
     let (memory, funs) = init();
 
