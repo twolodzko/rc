@@ -1,6 +1,5 @@
 use crate::{Algebra, expr::Method, number::Number};
 use anyhow::Result;
-use num::{BigInt, One};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Vector(pub Vec<Algebra>);
@@ -66,18 +65,18 @@ impl Vector {
         }
         let mut sum = Algebra::Number(Number::ZERO);
         for v in &self.0 {
-            sum = &sum + v;
+            sum = sum + v;
         }
         sum
     }
 
     pub fn prod(&self) -> Algebra {
         if self.is_empty() {
-            return Algebra::Number(Number::Integer(BigInt::one()));
+            return Algebra::Number(Number::ONE);
         }
-        let mut prod = Algebra::Number(Number::Integer(BigInt::one()));
+        let mut prod = Algebra::Number(Number::ONE);
         for v in &self.0 {
-            prod = &prod * v;
+            prod = prod * v;
         }
         prod
     }

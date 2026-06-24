@@ -1,14 +1,10 @@
-use crate::{COMPLEX, IntDiv, PRINT_AS_FLOAT, SCALE, expr::Method};
+use crate::{
+    COMPLEX, IntDiv, PRECISION, PRINT_AS_FLOAT, Pow, SCALE, expr::Method, to_complex, to_float,
+};
 use Number::*;
 use anyhow::{Result, bail};
-use num::{
-    Integer,
-    bigint::{BigInt, ToBigInt},
-    complex::Complex,
-    rational::Ratio,
-    traits::{Float, Inv, One, Pow, Signed, ToPrimitive, Zero},
-};
-use ordered_float::OrderedFloat;
+use ordered_float::{Float, OrderedFloat};
+use rug::ops::Pow as _;
 use std::{
     borrow::Cow,
     ops::{Add, Div, Mul, Neg, Rem, Sub},
@@ -16,22 +12,22 @@ use std::{
 
 #[derive(Clone, Debug)]
 pub enum Number {
-    Integer(BigInt),
-    Rational(Ratio<BigInt>),
-    Float(OrderedFloat<f64>),
-    Complex(Complex<f64>),
+    Integer(rug::Integer),
+    Rational(rug::Rational),
+    Float(rug::Float),
+    Complex(rug::Complex),
 }
 
 macro_rules! impl_method {
     ($($t:tt)*) => ($(
-        pub fn $t(&self) -> Number {
+        pub fn $t(self) -> Number {
             match self {
                 Complex(n) => Complex(n.$t()),
                 _ => {
-                    if let Some(x) = self.to_f64() {
+                    if let Some(x) = self.to_float() {
                         x.$t().into()
                     } else {
-                        Number::NAN
+                        Number::nan()
                     }
                 }
             }
@@ -45,11 +41,11 @@ macro_rules! impl_complex_method {
             if let Complex(n) = self {
                 n.$t().into()
             } else if unsafe { COMPLEX } && self.is_negative() {
-                self.to_complex().map(|x| Complex(x.$t())).unwrap_or(Number::NAN)
-            } else if let Some(x) = self.to_f64() {
+                self.to_complex().map(|x| Complex(x.$t())).unwrap_or_default()
+            } else if let Some(x) = self.to_float() {
                 x.$t().into()
             } else {
-                Number::NAN
+                Number::nan()
             }
         }
     )*)
@@ -58,24 +54,28 @@ macro_rules! impl_complex_method {
 macro_rules! impl_libm {
     ($($t:tt)*) => ($(
         pub fn $t(&self) -> Number {
-            if let Some(x) = self.to_f64() {
+            if let Some(x) = self.to_float() {
                 libm::$t(x).into()
             } else {
-                Number::NAN
+                Number::nan()
             }
         }
     )*)
 }
 
 impl Number {
-    pub const NAN: Number = Float(OrderedFloat(f64::NAN));
-    pub const INFINITY: Number = Float(OrderedFloat(f64::INFINITY));
+    pub const NAN: Number = Float(rug::Float::NAN);
+    pub const INFINITY: Number = Float(rug::Float::with_val(
+        unsafe { PRECISION },
+        rug::float::Special::Infinity,
+    ));
     pub const NEG_INFINITY: Number = Float(OrderedFloat(f64::NEG_INFINITY));
-    pub const ZERO: Number = Integer(BigInt::ZERO);
+    pub const ZERO: Number = Integer(rug::Integer::ZERO);
+    pub const ONE: Number = Integer(rug::Integer::ZERO);
     // common constants
     pub const PI: Number = Number::Float(OrderedFloat(std::f64::consts::PI));
     pub const E: Number = Number::Float(OrderedFloat(std::f64::consts::E));
-    pub const I: Number = Number::Complex(num::complex::Complex::I);
+    pub const I: Number = Number::Complex(num_complex::Complex::I);
     pub const EPSILON: Number = Number::Float(OrderedFloat(f64::EPSILON));
 
     impl_method!(cbrt exp exp2 sin cos tan asin acos atan tanh sinh cosh asinh acosh atanh);
@@ -100,9 +100,9 @@ impl Number {
             Cos => self.cos(),
             Cosh => self.cosh(),
             Deg => self
-                .to_f64()
+                .to_float()
                 .map(|x| x.to_degrees().into())
-                .unwrap_or(Number::NAN),
+                .unwrap_or_default(),
             Erf => self.erf(),
             Erfc => self.erfc(),
             Exp => self.exp(),
@@ -116,9 +116,9 @@ impl Number {
             Log2 => self.log2(),
             Neg => self.neg(),
             Rad => self
-                .to_f64()
+                .to_float()
                 .map(|x| x.to_radians().into())
-                .unwrap_or(Number::NAN),
+                .unwrap_or_default(),
             Round => self.round(),
             Sin => self.sin(),
             Sinh => self.sinh(),
@@ -133,17 +133,17 @@ impl Number {
         match self {
             Integer(x) => x.is_zero(),
             Rational(x) => x.is_zero(),
-            Float(x) => x.is_zero(),
-            Complex(x) => x.is_zero(),
+            Float(x) => *x == 0.0,
+            Complex(x) => *x.real() == 0.0 && *x.imag() == 0.0,
         }
     }
 
     pub fn is_one(&self) -> bool {
         match self {
-            Integer(x) => x.is_one(),
-            Rational(x) => x.is_one(),
-            Float(x) => x.is_one(),
-            Complex(x) => x.is_one(),
+            Integer(x) => *x == 1,
+            Rational(x) => *x == 1,
+            Float(x) => *x == 1.0,
+            Complex(x) => *x.real() == 1.0 && *x.imag() == 0.0,
         }
     }
 
@@ -151,7 +151,7 @@ impl Number {
         match self {
             Integer(x) => x.is_negative(),
             Rational(x) => x.is_negative(),
-            Float(x) => x.is_negative(),
+            Float(x) => x.is_sign_negative(),
             Complex(_) => false,
         }
     }
@@ -160,7 +160,7 @@ impl Number {
         match self {
             Integer(x) => x.is_positive(),
             Rational(x) => x.is_positive(),
-            Float(x) => x.is_positive(),
+            Float(x) => x.is_sign_positive(),
             Complex(_) => false,
         }
     }
@@ -168,7 +168,7 @@ impl Number {
     pub fn is_infinite(&self) -> bool {
         match self {
             Float(x) => x.is_infinite(),
-            Complex(x) => x.is_infinite(),
+            Complex(x) => x.real().is_infinite() || x.imag().is_infinite(),
             _ => false,
         }
     }
@@ -176,14 +176,14 @@ impl Number {
     pub fn is_nan(&self) -> bool {
         match self {
             Float(x) => x.is_nan(),
-            Complex(x) => x.is_nan(),
+            Complex(x) => x.real().is_nan() || x.imag().is_nan(),
             _ => false,
         }
     }
 
     /// Number is an even integer
     pub fn is_even(&self) -> bool {
-        self.to_bigint().is_some_and(|x| x.is_even())
+        self.to_integer().is_some_and(|x| x.is_even())
     }
 
     pub fn is_complex(&self) -> bool {
@@ -195,38 +195,48 @@ impl Number {
         match self {
             Integer(_) => true,
             Rational(x) => x.is_integer(),
-            Float(x) => x.floor() == *x,
-            Complex(x) => x.to_f64().is_some_and(|f| f.floor() == f),
+            Float(x) => x.floor() == x.0,
+            Complex(x) => x.to_float().is_some_and(|f| f.floor() == f),
         }
+    }
+
+    pub fn nan() -> Number {
+        Float(to_float(rug::float::Special::Nan))
+    }
+
+    pub fn inf() -> Number {
+        Float(to_float(rug::float::Special::Nan))
+    }
+
+    pub fn neg_ing() -> Number {
+        Float(to_float(rug::float::Special::NegInfinity))
     }
 
     /// Attempt casting number to float or return NaN
     pub fn cast_to_float(&self) -> Number {
-        match self {
-            Integer(x) => x.to_f64().unwrap_or(f64::NAN).into(),
-            Rational(x) => x.to_f64().unwrap_or(f64::NAN).into(),
-            Complex(x) => x.to_f64().unwrap_or(f64::NAN).into(),
-            Float(_) => self.clone(),
-        }
+        Float(
+            self.to_float()
+                .unwrap_or(to_float(rug::float::Special::Nan)),
+        )
     }
 
     /// Cast number to rational if possible
     fn cast_to_rational(&self) -> Number {
         match self {
-            Integer(i) => Rational(Ratio::from_integer(i.clone())),
+            Integer(i) => Rational(rug::Rational::from(i.clone())),
             Rational(_) => self.clone(),
-            Float(f) if let Some(r) = Ratio::from_float(f.0) => Rational(r),
+            Float(f) if let Ok(r) = rug::Rational::try_from(f) => Rational(r),
             Complex(c)
-                if let Some(f) = c.to_f64()
-                    && let Some(r) = Ratio::from_float(f) =>
+                if let Ok(f) = c.try_into::<f64>()
+                    && let Ok(r) = rug::Rational::try_from(c) =>
             {
                 Rational(r)
             }
-            _ => Number::NAN,
+            _ => Number::nan(),
         }
     }
 
-    pub fn to_bigint(&self) -> Option<BigInt> {
+    pub fn to_integer(&self) -> Option<rug::Integer> {
         if !self.is_integerish() {
             return None;
         }
@@ -236,29 +246,44 @@ impl Number {
                 if !x.is_integer() {
                     return None;
                 }
-                Some(x.to_integer())
+                debug_assert_eq!(*x.denom(), 1);
+                Some(x.numer().clone())
             }
-            Float(x) => x.to_i128().map(|i| i.into()),
+            Float(x) => {
+                if x.is_integer() {
+                    return rug::Integer::try_from(x).ok();
+                }
+                None
+            }
             Complex(x) => x.to_i128().map(|i| i.into()),
         }
     }
 
-    pub fn to_f64(&self) -> Option<f64> {
+    pub fn to_float(&self) -> Option<rug::Float> {
         match self {
-            Integer(x) => x.to_f64(),
-            Rational(x) => x.to_f64(),
-            Float(x) => Some(x.0),
-            Complex(x) => x.to_f64(),
+            Integer(x) => Some(to_float(x)),
+            Rational(x) => {
+                let num = to_float(x.numer());
+                let den = to_float(x.denom());
+                Some(num / den)
+            }
+            Float(x) => Some(x.clone()),
+            Complex(x) => {
+                if x.imag().is_zero() {
+                    return Some(x.real().clone());
+                }
+                None
+            }
         }
     }
 
-    pub fn to_complex(&self) -> Option<Complex<f64>> {
+    pub fn to_complex(&self) -> Option<rug::Complex> {
         debug_assert!(unsafe { COMPLEX });
         match self {
-            Integer(x) => Some(Complex::from(x.to_f64()?)),
-            Rational(x) => Some(Complex::from(x.to_f64()?)),
-            Float(x) => Some(Complex::from(x.0)),
-            Complex(x) => Some(*x),
+            Integer(x) => Some(to_complex(x)),
+            Rational(x) => Some(to_complex(x)),
+            Float(x) => Some(to_complex(x)),
+            Complex(x) => Some(x.clone()),
         }
     }
 
@@ -273,11 +298,11 @@ impl Number {
 
     pub fn abs(&self) -> Number {
         match self {
-            Integer(x) => Integer(x.abs()),
-            Rational(x) => Rational(x.abs()),
-            Float(x) => Float(x.abs()),
+            Integer(x) => Integer(x.clone().abs()),
+            Rational(x) => Rational(x.clone().abs()),
+            Float(x) => Float(x.abs().into()),
             // |a + bi| = sqrt(a^2 + b^2)
-            Complex(x) => Float(x.norm().into()),
+            Complex(x) => Float(x.norm().sqrt().real().clone()),
         }
     }
 
@@ -285,56 +310,65 @@ impl Number {
         if unsafe { COMPLEX } && self.is_negative() {
             self.to_complex()
                 .map(|c| Complex(c.powf(rhs)))
-                .unwrap_or(Number::NAN)
-        } else if let Some(x) = self.to_f64() {
+                .unwrap_or_default()
+        } else if let Some(x) = self.to_float() {
             x.powf(rhs).into()
         } else {
-            Number::NAN
+            Number::nan()
         }
     }
 
-    fn powi(&self, rhs: &BigInt) -> Number {
+    fn powi(&self, rhs: &rug::Integer) -> Number {
         match self {
             Integer(x) => {
                 if let Ok(n) = TryInto::<u32>::try_into(rhs.abs()) {
                     if rhs.is_negative() {
-                        Rational(Ratio::new(BigInt::one(), x.pow(n)))
+                        Rational(rug::Rational::from((rug::Integer::ONE, x.pow(n))))
                     } else {
                         Integer(x.pow(n))
                     }
-                } else if let Some(rhs) = rhs.to_f64() {
+                } else if let Ok(rhs) = rhs.try_into() {
                     self.powf(rhs)
                 } else {
-                    Number::NAN
+                    Number::nan()
                 }
             }
             Rational(x) => {
                 if let Ok(n) = TryInto::<i32>::try_into(rhs) {
                     Rational(x.pow(n))
-                } else if let Some(rhs) = rhs.to_f64() {
+                } else if let Ok(rhs) = rhs.try_into() {
                     self.powf(rhs)
                 } else {
-                    Number::NAN
+                    Number::nan()
                 }
             }
             Float(x) => {
                 if let Ok(n) = TryInto::<i32>::try_into(rhs) {
-                    Float(x.powi(n))
-                } else if let Some(rhs) = rhs.to_f64() {
+                    Float(x.powi(n).into())
+                } else if let Ok(rhs) = rhs.try_into() {
                     self.powf(rhs)
                 } else {
-                    Number::NAN
+                    Number::nan()
                 }
             }
             Complex(x) => {
                 if let Ok(n) = TryInto::<i32>::try_into(rhs) {
                     Complex(x.powi(n))
-                } else if let Some(rhs) = rhs.to_f64() {
+                } else if let Ok(rhs) = rhs.try_into() {
                     Complex(x.powf(rhs))
                 } else {
-                    Number::NAN
+                    Number::nan()
                 }
             }
+        }
+    }
+
+    fn inv(self) -> Number {
+        match self {
+            Integer(x) => Rational(rug::Rational::from((1, x.clone()))),
+            Rational(x) => Rational(x.recip()),
+            Float(x) => Float(x.recip().into()),
+            Complex(x) => Complex(x.recip()),
         }
     }
 
@@ -342,8 +376,8 @@ impl Number {
         match self {
             Integer(_) => self.clone(),
             Rational(x) => Integer(x.floor().to_integer()),
-            Float(x) => x.floor().to_bigint().map(Integer).unwrap_or(Number::NAN),
-            Complex(x) => num::Complex::new(x.re.floor(), x.im.floor()).into(),
+            Float(x) => x.floor().to_integer().map(Integer).unwrap_or_default(),
+            Complex(x) => to_complex((x.real().floor(), x.imag().floor())).into(),
         }
     }
 
@@ -351,8 +385,8 @@ impl Number {
         match self {
             Integer(_) => self.clone(),
             Rational(x) => Integer(x.ceil().to_integer()),
-            Float(x) => x.ceil().to_bigint().map(Integer).unwrap_or(Number::NAN),
-            Complex(x) => num::Complex::new(x.re.ceil(), x.im.ceil()).into(),
+            Float(x) => x.ceil().to_bigint().map(Integer).unwrap_or_default(),
+            Complex(x) => to_complex((x.real().ceil(), x.imag().ceil())).into(),
         }
     }
 
@@ -360,8 +394,8 @@ impl Number {
         match self {
             Integer(_) => self.clone(),
             Rational(x) => Integer(x.round().to_integer()),
-            Float(x) => x.round().to_bigint().map(Integer).unwrap_or(Number::NAN),
-            Complex(x) => num::Complex::new(x.re.round(), x.im.round()).into(),
+            Float(x) => x.round().to_bigint().map(Integer).unwrap_or_default(),
+            Complex(x) => to_complex((x.real().round(), x.imag().round())).into(),
         }
     }
 
@@ -369,56 +403,60 @@ impl Number {
         match self {
             Integer(_) => self.clone(),
             Rational(x) => Integer(x.trunc().to_integer()),
-            Float(x) => x.trunc().to_bigint().map(Integer).unwrap_or(Number::NAN),
-            Complex(x) => num::Complex::new(x.re.trunc(), x.im.trunc()).into(),
+            Float(x) => x.trunc().to_bigint().map(Integer).unwrap_or_default(),
+            Complex(x) => to_complex((x.real().trunc(), x.imag().trunc())).into(),
         }
     }
 
     fn factorial(&self) -> Number {
-        let Some(n) = self.to_bigint() else {
-            return Number::NAN;
+        let Some(n) = self.to_integer() else {
+            return Number::nan();
         };
         if n.is_negative() {
-            return Number::NAN;
+            return Number::nan();
         }
         if self.is_one() || self.is_zero() {
-            return Integer(BigInt::one());
+            return Number::nan();
         }
 
-        fn recfact(start: &BigInt, n: &BigInt) -> BigInt {
+        fn recfact(start: rug::Integer, n: rug::Integer) -> rug::Integer {
             // The "just use BigInt library" algorithm from:
             // http://www.luschny.de/math/factorial/FastFactorialFunctions.htm
-            if n <= &16.into() {
+            if n <= 16 {
                 let mut r = start.clone();
-                for i in num::iter::range(start + 1, start + n) {
+                let mut i = start + 1;
+                while i <= &start + &n {
                     r *= i;
+                    i += 1;
                 }
                 return r;
             }
             let i = n / 2;
-            let start2 = start + &i;
-            let i2 = n - &i;
-            recfact(start, &i) * recfact(&start2, &i2)
+            let start2 = start + i;
+            let i2 = n - i;
+            recfact(start, i) * recfact(start2, i2)
         }
-        Integer(recfact(&BigInt::one(), &n))
+        Integer(recfact(rug::Integer::ONE.clone(), n))
     }
 
     pub fn choose(&self, k: &Number) -> Number {
-        let Some(n) = self.to_bigint() else {
-            return Number::NAN;
+        let Some(n) = self.to_integer() else {
+            return Number::nan();
         };
-        let Some(k) = k.to_bigint() else {
-            return Number::NAN;
+        let Some(k) = k.to_integer() else {
+            return Number::nan();
         };
         if k < 0.into() || n < k {
-            return Number::NAN;
+            return Number::nan();
         }
         // see: https://en.wikipedia.org/wiki/Binomial_coefficient#Multiplicative_formula
-        let mut acc = Ratio::from_integer(BigInt::one());
-        for i in num::iter::range_inclusive(BigInt::one(), k) {
+        let mut acc = rug::Rational::from(1);
+        let mut i: rug::Integer = 1.into();
+        while i <= k {
             // (n+1-i)/i
-            let numer = &n + &BigInt::one() - &i;
-            acc *= Ratio::new(numer.clone(), i.clone());
+            let num: rug::Integer = n + 1 - i;
+            acc *= rug::Rational::from((num.clone(), i.clone()));
+            i += 1;
         }
         Integer(acc.to_integer())
     }
@@ -426,43 +464,50 @@ impl Number {
     pub fn rat(&self) -> Number {
         match self {
             Integer(_) | Rational(_) => self.clone(),
-            Float(x) => to_rat(x.0),
-            Complex(x) => to_rat(x.to_f64().unwrap_or(f64::NAN)),
+            Float(x) => x.to_rational().map(Rational).unwrap_or(f64::NAN),
+            Complex(x) => {
+                if x.imag().is_zero() && x.real().is_integer() {
+                    return x.real().to_rational().map(Rational).unwrap_or(f64::NAN);
+                }
+                f64::NAN
+            }
         }
     }
 
     /// Compute x^(1/n)
-    fn nth_root(&self, n: &BigInt) -> Number {
+    fn nth_root(self, n: rug::Integer) -> Number {
         // https://math.stackexchange.com/a/1608619
         if let Complex(x) = self {
             complex_nth_root(x, n).into()
-        } else if let Some(x) = self.to_f64() {
-            f64_nth_root(x, n).into()
+        } else if let Some(x) = self.to_float() {
+            float_nth_root(x, n).into()
         } else {
-            Number::NAN
+            Number::nan()
         }
     }
 }
 
-fn complex_nth_root(x: &num::Complex<f64>, n: &BigInt) -> num::Complex<f64> {
-    if n == &BigInt::from(2) {
+fn complex_nth_root(x: rug::Complex, n: rug::Integer) -> rug::Complex {
+    if n == 2 {
         x.sqrt()
-    } else if n == &BigInt::from(3) {
+    } else if n == 3 {
         x.cbrt()
-    } else if let Some(n) = n.to_f64() {
+    } else if let Ok(n) = n.try_into() {
         x.powf(n.inv())
     } else {
         f64::NAN.into()
     }
 }
 
-fn f64_nth_root(x: f64, n: &BigInt) -> f64 {
-    if n == &BigInt::from(2) {
+fn float_nth_root(x: rug::Float, n: rug::Integer) -> rug::Float {
+    if n == 2 {
         x.sqrt()
-    } else if n == &BigInt::from(3) {
+    } else if n == 3 {
         x.cbrt()
-    } else if let Some(n) = n.to_f64() {
-        x.powf(n.inv())
+    } else if let Ok(n) = n.try_into::<u32>() {
+        x.root(n)
+    } else if let Ok(n) = n.try_into::<f64>() {
+        x.pow(n.recip())
     } else {
         f64::NAN
     }
@@ -471,52 +516,52 @@ fn f64_nth_root(x: f64, n: &BigInt) -> f64 {
 /// Return rational approximation of a float or NaN if not possible
 fn to_rat(f: f64) -> Number {
     if f.is_nan() || f.is_infinite() {
-        return Number::NAN;
+        return Number::nan();
     }
-    if let Some(r) = Ratio::from_float(f) {
+    if let Ok(r) = rug::Rational::try_from(f) {
         return Rational(r);
     }
     let (mantissa, exponent, sign) = f.integer_decode();
-    let sign = Ratio::from_integer(sign.into());
-    let mantissa = Ratio::from_integer(mantissa.into());
-    let base = Ratio::from_integer(BigInt::from(2));
+    let sign = rug::Rational::from(sign);
+    let mantissa = rug::Rational::from(mantissa);
+    let base = rug::Rational::from(2);
     Rational(sign * mantissa * base.pow(exponent as i32))
 }
 
 macro_rules! op {
     ( $lhs:tt, $method:tt, $rhs:tt ) => {{
         match (&$lhs, &$rhs) {
-            (Integer(a), Integer(b)) => Integer(a.$method(b)),
-            (Integer(a), Rational(b)) => Rational(Ratio::from_integer(a.clone()).$method(b)),
-            (Rational(a), Integer(b)) => Rational(a.$method(b)),
-            (Rational(a), Rational(b)) => Rational(a.$method(b)),
+            (Integer(a), Integer(b)) => Integer(a.$method(b).into()),
+            (Integer(a), Rational(b)) => Rational(rug::Rational::from(a.clone()).$method(b)),
+            (Rational(a), Integer(b)) => Rational(a.$method(b).into()),
+            (Rational(a), Rational(b)) => Rational(a.$method(b).into()),
             (Complex(a), Complex(b)) => Complex(a.$method(b)),
             (Complex(a), _) => {
-                if let Some(b) = $rhs.to_f64() {
+                if let Ok(b) = $rhs.try_into() {
                     Complex(a.$method(b))
                 } else {
-                    Number::NAN
+                    Number::nan()
                 }
             }
             (_, Complex(b)) => {
-                if let Some(a) = $lhs.to_f64() {
-                    Complex(a.$method(b))
+                if let Some(a) = $lhs.to_float() {
+                    Complex(a.into().$method(b))
                 } else {
-                    Number::NAN
+                    Number::nan()
                 }
             }
             (Float(a), _) => {
-                if let Some(b) = $rhs.to_f64() {
-                    a.0.$method(b).into()
+                if let Some(b) = $rhs.to_float() {
+                    a.$method(b).into()
                 } else {
-                    Number::NAN
+                    Number::nan()
                 }
             }
             (_, Float(b)) => {
-                if let Some(a) = $lhs.to_f64() {
-                    a.$method(b.0).into()
+                if let Some(a) = $lhs.to_float() {
+                    a.$method(b).into()
                 } else {
-                    Number::NAN
+                    Number::nan()
                 }
             }
         }
@@ -525,10 +570,18 @@ macro_rules! op {
 
 macro_rules! impl_op {
     ( $trait:ident, $method:ident) => {
-        impl $trait for &Number {
+        impl $trait for Number {
             type Output = Number;
 
-            fn $method(self, rhs: Self) -> Self::Output {
+            fn $method(self, rhs: Number) -> Self::Output {
+                op!(self, $method, rhs)
+            }
+        }
+
+        impl $trait<&Number> for &Number {
+            type Output = Number;
+
+            fn $method(self, rhs: &Number) -> Self::Output {
                 op!(self, $method, rhs)
             }
         }
@@ -540,36 +593,36 @@ impl_op!(Sub, sub);
 impl_op!(Mul, mul);
 impl_op!(Rem, rem);
 
-impl Div for &Number {
+impl Div for Number {
     type Output = Number;
 
     fn div(self, rhs: Self) -> Self::Output {
         if rhs.is_zero() {
-            return Number::NAN;
+            return Number::nan();
         }
         if self.is_one() {
             return rhs.inv();
         }
         match (self, rhs) {
-            (Integer(n), Integer(d)) => Rational(Ratio::new(n.clone(), d.clone())),
+            (Integer(n), Integer(d)) => Rational(rug::Rational::from((n.clone(), d.clone()))),
             (a, b) => op!(a, div, b),
         }
     }
 }
 
-impl Pow<&Number> for &Number {
+impl Pow for Number {
     type Output = Number;
 
-    fn pow(self, rhs: &Number) -> Number {
+    fn pow(self, rhs: Number) -> Self::Output {
         if rhs.is_zero() {
-            return Integer(BigInt::one());
+            return Number::ONE;
         }
         if rhs.is_one() {
             return self.clone();
         }
         if self.is_zero() {
             if rhs.is_negative() {
-                return Number::NAN;
+                return Number::nan();
             } else {
                 return Number::ZERO;
             }
@@ -587,7 +640,7 @@ impl Pow<&Number> for &Number {
                 if unsafe { COMPLEX } && xm.is_negative() && n.is_even() {
                     xm.to_complex()
                         .map(|ref xm| complex_nth_root(xm, n).into())
-                        .unwrap_or(Number::NAN)
+                        .unwrap_or_default()
                 } else {
                     xm.nth_root(n)
                 }
@@ -598,29 +651,29 @@ impl Pow<&Number> for &Number {
             (_, Complex(p)) => self
                 .to_complex()
                 .map(|c| Complex(c.powc(*p)))
-                .unwrap_or(Number::NAN),
+                .unwrap_or_default(),
             // float powers
             (_, Float(rhs)) if *rhs == 0.5 => self.sqrt(),
-            _ => rhs.to_f64().map(|x| self.powf(x)).unwrap_or(Number::NAN),
+            _ => rhs.to_float().map(|x| self.powf(x)).unwrap_or_default(),
         }
     }
 }
 
-impl IntDiv for &Number {
+impl IntDiv for Number {
     type Output = Number;
 
-    fn idiv(self, rhs: &Number) -> Self::Output {
+    fn idiv(self, rhs: Number) -> Self::Output {
         if rhs.is_zero() {
-            return Number::NAN;
+            return Number::nan();
         }
-        match (self, rhs) {
-            (Integer(a), Integer(b)) => Integer(a / b),
+        match (&self, &rhs) {
+            (Integer(a), Integer(b)) => Integer((a / b).into()),
             _ => (self / rhs).trunc(),
         }
     }
 }
 
-impl std::ops::Neg for &Number {
+impl std::ops::Neg for Number {
     type Output = Number;
 
     fn neg(self) -> Self::Output {
@@ -629,19 +682,6 @@ impl std::ops::Neg for &Number {
             Rational(x) => Rational(-x),
             Float(x) => Float(-x),
             Complex(x) => Complex(-x),
-        }
-    }
-}
-
-impl Inv for &Number {
-    type Output = Number;
-
-    fn inv(self) -> Self::Output {
-        match self {
-            Integer(x) => Rational(Ratio::new(BigInt::one(), x.clone())),
-            Rational(x) => Rational(x.inv()),
-            Float(x) => Float(x.recip()),
-            Complex(x) => Complex(x.inv()),
         }
     }
 }
@@ -681,21 +721,21 @@ impl std::cmp::Ord for &Number {
     }
 }
 
-impl From<f64> for Number {
-    fn from(value: f64) -> Self {
-        Number::Float(value.into())
-    }
-}
-
 impl From<usize> for Number {
     fn from(value: usize) -> Self {
         Number::Integer(value.into())
     }
 }
 
-impl From<Complex<f64>> for Number {
-    fn from(value: Complex<f64>) -> Self {
+impl From<rug::Complex> for Number {
+    fn from(value: rug::Complex) -> Self {
         Complex(value)
+    }
+}
+
+impl From<rug::Float> for Number {
+    fn from(value: rug::Float) -> Self {
+        Float(value)
     }
 }
 
@@ -715,8 +755,8 @@ impl std::fmt::Display for Number {
             Integer(n) => write!(f, "{}", n),
             Rational(n) => {
                 if unsafe { PRINT_AS_FLOAT } {
-                    // to_f64 will still produce inf and nan, so this does not hurt
-                    let n = n.to_f64().unwrap_or(f64::NAN);
+                    // to_float will still produce inf and nan, so this does not hurt
+                    let n = n.try_into::<f64>().unwrap_or(f64::NAN);
                     write_scaled!(f, n)
                 } else {
                     write!(f, "{}", n)
@@ -728,16 +768,22 @@ impl std::fmt::Display for Number {
     }
 }
 
+impl Default for Number {
+    fn default() -> Self {
+        Number::nan()
+    }
+}
+
 /// Unify types of two numbers
 fn same_types<'a, 'b>(lhs: &'a Number, rhs: &'b Number) -> (Cow<'a, Number>, Cow<'b, Number>) {
     match (lhs, rhs) {
         // cast to complex
         (Complex(_), _) => {
-            let rhs = rhs.to_complex().map(Complex).unwrap_or(Number::NAN);
+            let rhs = rhs.to_complex().map(Complex).unwrap_or_default();
             (Cow::Borrowed(lhs), Cow::Owned(rhs))
         }
         (_, Complex(_)) => {
-            let lhs = lhs.to_complex().map(Complex).unwrap_or(Number::NAN);
+            let lhs = lhs.to_complex().map(Complex).unwrap_or_default();
             (Cow::Owned(lhs), Cow::Borrowed(rhs))
         }
         // cast to floats

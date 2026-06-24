@@ -1,11 +1,10 @@
 use crate::{
-    IntDiv,
+    IntDiv, Pow,
     expr::{Method, Op},
     interval, number, vector,
 };
 use Algebra::*;
 use anyhow::Result;
-use num::traits::Pow;
 use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
 #[derive(Debug, Clone)]
@@ -271,7 +270,7 @@ impl Neg for &Algebra {
 
     fn neg(self) -> Self::Output {
         match self {
-            Number(x) => Number(-x),
+            Number(x) => Number(-x.clone()),
             Interval(x) => Interval(-x),
             Vector(x) => Vector(x.map(|v| -v)),
         }

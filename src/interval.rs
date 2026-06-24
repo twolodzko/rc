@@ -1,13 +1,9 @@
 use crate::{
-    IntDiv,
+    IntDiv, Pow,
     expr::{Method, Op},
     number::Number,
 };
 use anyhow::{Result, bail};
-use num::{
-    BigInt,
-    traits::{One, Pow},
-};
 use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -285,7 +281,7 @@ impl Rem for &Interval {
                     modulus
                         .upper
                         .neg()
-                        .to_f64()
+                        .to_float()
                         .unwrap_or(f64::NAN)
                         .next_up()
                         .into(),
@@ -303,7 +299,7 @@ impl Rem for &Interval {
                 let almost_bound = Number::Float(
                     modulus
                         .upper
-                        .to_f64()
+                        .to_float()
                         .unwrap_or(f64::NAN)
                         .next_down()
                         .into(),
@@ -327,8 +323,8 @@ impl Pow<&Interval> for &Interval {
         }
         if rhs.is_zero() {
             return Interval {
-                lower: Number::Integer(BigInt::one()),
-                upper: Number::Integer(BigInt::one()),
+                lower: Number::ONE,
+                upper: Number::ONE,
             };
         }
         if rhs.is_one() {
@@ -393,8 +389,8 @@ impl Pow<&Number> for &Interval {
         }
         if rhs.is_zero() {
             return Interval {
-                lower: Number::Integer(BigInt::one()),
-                upper: Number::Integer(BigInt::one()),
+                lower: Number::ONE,
+                upper: Number::ONE,
             };
         }
         if rhs.is_one() {

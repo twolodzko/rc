@@ -8,11 +8,12 @@ anyhow = "1.0.102"
 clap = { version = "4.6.1", features = ["derive", "env"] }
 color-print = "0.3.7"
 libm = "0.2.16"
-num = "0.4.3"
+num-iter = "0.1.45"
 ordered-float = "5.3.0"
 pest = "2.8.6"
 pest_derive = "2.8.6"
 rand = "0.10.1"
+rug = "1.30.0"
 rustyline = "18.0.0"
 shellexpand = "3.1.2"
 

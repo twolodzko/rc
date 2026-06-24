@@ -26,6 +26,21 @@ use std::{cell::RefCell, collections::HashMap, fs::File, io::Read, path::PathBuf
 pub static mut SCALE: Option<usize> = None;
 pub static mut PRINT_AS_FLOAT: bool = false;
 pub static mut COMPLEX: bool = false;
+pub static mut PRECISION: u32 = 64;
+
+pub fn to_float<T>(value: T) -> rug::Float
+where
+    rug::Float: rug::Assign<T>,
+{
+    rug::Float::with_val(unsafe { PRECISION }, value)
+}
+
+pub fn to_complex<T>(value: T) -> rug::Complex
+where
+    rug::Complex: rug::Assign<T>,
+{
+    rug::Complex::with_val(unsafe { PRECISION }, value)
+}
 
 #[derive(Debug, Clone)]
 pub enum Template {
@@ -100,4 +115,9 @@ pub trait IntDiv<Rhs = Self> {
     type Output;
     /// Floor division defined as `(self / rhs).trunc()`
     fn idiv(self, rhs: Rhs) -> Self::Output;
+}
+
+pub trait Pow<Rhs = Self> {
+    type Output;
+    fn pow(self, rhs: Rhs) -> Self::Output;
 }

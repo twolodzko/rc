@@ -1,11 +1,11 @@
 use crate::{
-    Algebra, ArityError, COMPLEX, Template,
+    Algebra, ArityError, COMPLEX, PRECISION, Template,
     expr::{Expr, Function, Method, Op},
     number::Number,
+    to_complex, to_float,
 };
 use anyhow::{Result, bail};
 use core::f64;
-use num::{bigint::BigInt, complex::Complex};
 use pest::{
     Parser,
     iterators::{Pair, Pairs},
@@ -125,9 +125,7 @@ fn parse_expr(pairs: Pairs<Rule>) -> Result<Expr> {
                     Expr::Variable(ref n) if n == "e" => {
                         return Ok(Expr::Primitive(Method::Exp, Box::new(rhs)));
                     }
-                    Expr::Value(Algebra::Number(x))
-                        if x.to_bigint().is_some_and(|x| x == 2.into()) =>
-                    {
+                    Expr::Value(Algebra::Number(x)) if x.to_integer().is_some_and(|x| x == 2) => {
                         return Ok(Expr::Primitive(Method::Exp2, Box::new(rhs)));
                     }
                     _ => (),
@@ -238,10 +236,11 @@ fn parse_primary(primary: Pair<'_, Rule>) -> Result<Expr> {
         }
         Rule::float => {
             let s = primary.as_str();
-            let number = if let Ok(value) = BigInt::from_str(s) {
+            let number = if let Ok(value) = rug::Integer::from_str(s) {
                 Expr::Value(Algebra::Number(Number::Integer(value)))
             } else if let Ok(value) = f64::from_str(s) {
-                Expr::Value(Algebra::Number(Number::Float(value.into())))
+                let value = to_float(value);
+                Expr::Value(Algebra::Number(Number::Float(value)))
             } else {
                 Expr::Value(Algebra::Number(Number::NAN))
             };
@@ -263,9 +262,9 @@ fn parse_primary(primary: Pair<'_, Rule>) -> Result<Expr> {
                 real = f64::from_str(first.as_str())?;
                 parse_imag(inner.next().unwrap())?
             };
-            Ok(Expr::Value(Algebra::Number(Number::Complex(Complex::new(
+            Ok(Expr::Value(Algebra::Number(Number::Complex(to_complex((
                 real, imag,
-            )))))
+            ))))))
         }
         Rule::vector => {
             let mut acc = Vec::new();

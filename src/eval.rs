@@ -1,12 +1,11 @@
 use crate::{
-    Algebra, ArityError, AssertionError, Functions, Memory, Template, eval_file,
+    Algebra, ArityError, AssertionError, Functions, Memory, PRECISION, Template, eval_file,
     expr::{Expr, Function, Op},
     interval::Interval,
     number::Number,
-    vector,
+    to_float, vector,
 };
 use anyhow::{Result, anyhow, bail};
-use num::{BigInt, One};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra> {
@@ -206,7 +205,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
             Apply(ref name, ref exprs) if name == "rand" => {
                 fn random() -> Algebra {
                     let r = rand::random_range(0.0..1.0);
-                    Algebra::Number(Number::Float(r.into()))
+                    Algebra::Number(Number::Float(to_float(r)))
                 }
                 match exprs.len() {
                     0 => return Ok(random()),
@@ -318,7 +317,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
             }
             Apply(ref name, ref exprs) if name == "seq" => {
                 let step = match exprs.len() {
-                    2 => Number::Integer(BigInt::one()),
+                    2 => Number::ONE,
                     3 => eval_to_number(&exprs[2], memory.clone(), funs.clone())?,
                     _ => {
                         bail!("{} expected 2 or 3 arguments, got {}", name, exprs.len())
@@ -357,7 +356,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                     })
                 }
                 let val = eval(&exprs[0], memory, funs)?;
-                return Ok(val.map(|x| x.to_bigint().map(Number::Integer).unwrap_or(Number::NAN)));
+                return Ok(val.map(|x| x.to_integer().map(Number::Integer).unwrap_or(Number::NAN)));
             }
             Apply(ref name, ref exprs) if name == "float" => {
                 if exprs.len() != 1 {
@@ -368,7 +367,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                     })
                 }
                 let val = eval(&exprs[0], memory, funs)?;
-                return Ok(val.map(|x| x.to_f64().map(|f| f.into()).unwrap_or(Number::NAN)));
+                return Ok(val.map(|x| x.to_float().map(|f| f.into()).unwrap_or(Number::NAN)));
             }
             Apply(ref name, ref exprs) if name == "rat" => {
                 if exprs.len() != 1 {
