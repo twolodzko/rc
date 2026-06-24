@@ -3,9 +3,10 @@ use crate::{
     expr::{Expr, Function, Op},
     interval::Interval,
     number::Number,
-    to_float, vector,
+    to_complex, to_float, vector,
 };
 use anyhow::{Result, anyhow, bail};
+use core::f64;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra> {
@@ -17,10 +18,13 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
             Value(n) => return Ok(n),
             Variable(ref n) => {
                 return match n.as_str() {
-                    "pi" => Ok(Algebra::Number(Number::PI)),
-                    "e" => Ok(Algebra::Number(Number::E)),
-                    "i" => Ok(Algebra::Number(Number::I)),
-                    "epsilon" => Ok(Algebra::Number(Number::EPSILON)),
+                    "pi" => Ok(Algebra::Number(Number::Float(to_float(
+                        rug::float::Constant::Pi,
+                    )))),
+                    "e" => Ok(Algebra::Number(Number::Float(to_float(
+                        rug::float::Constant::Euler,
+                    )))),
+                    "i" => Ok(Algebra::Number(Number::Complex(to_complex((0, 1))))),
                     _ => memory
                         .borrow()
                         .get(n)
@@ -356,7 +360,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                     })
                 }
                 let val = eval(&exprs[0], memory, funs)?;
-                return Ok(val.map(|x| x.to_integer().map(Number::Integer).unwrap_or(Number::NAN)));
+                return Ok(val.map(|x| x.to_integer().map(Number::Integer).unwrap_or_default()));
             }
             Apply(ref name, ref exprs) if name == "float" => {
                 if exprs.len() != 1 {
@@ -367,7 +371,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
                     })
                 }
                 let val = eval(&exprs[0], memory, funs)?;
-                return Ok(val.map(|x| x.to_float().map(|f| f.into()).unwrap_or(Number::NAN)));
+                return Ok(val.map(|x| x.to_float().map(|f| f.into()).unwrap_or_default()));
             }
             Apply(ref name, ref exprs) if name == "rat" => {
                 if exprs.len() != 1 {
@@ -403,7 +407,7 @@ pub fn eval(expr: &Expr, mut memory: Memory, funs: Functions) -> Result<Algebra>
             Function(func) => {
                 funs.borrow_mut()
                     .insert(func.name.to_string(), func.clone());
-                return Ok(Algebra::NAN);
+                return Ok(Algebra::nan());
             }
             Print(ref template) => {
                 let (msg, last) = eval_template(template, memory, funs)?;
@@ -445,7 +449,7 @@ impl Function {
 
 /// Evaluate the expressions, save result of each expression saved to the `_` variable
 pub fn eval_keep_state(exprs: &[Expr], memory: Memory, funs: Functions) -> Result<Algebra> {
-    let mut last = Algebra::NAN;
+    let mut last = Algebra::nan();
     for expr in exprs {
         last = eval(expr, memory.clone(), funs.clone())?;
         memory.borrow_mut().insert("_".to_string(), last.clone());
@@ -535,7 +539,7 @@ fn extract(vector: &vector::Vector, index: &[Algebra]) -> Result<Algebra> {
     if asking_for_many {
         Ok(Algebra::Vector(acc.into()))
     } else {
-        Ok(acc.pop().unwrap_or(Algebra::NAN))
+        Ok(acc.pop().unwrap_or(Algebra::nan()))
     }
 }
 
@@ -545,7 +549,7 @@ fn eval_template(
     funs: Functions,
 ) -> Result<(String, Algebra)> {
     let mut msg = String::new();
-    let mut last = Algebra::NAN;
+    let mut last = Algebra::nan();
     for t in template {
         let s = match t {
             Template::String(s) => s,
@@ -560,5 +564,5 @@ fn eval_template(
 }
 
 fn is_constant(name: &str) -> bool {
-    matches!(name, "pi" | "e" | "i" | "epsilon")
+    matches!(name, "pi" | "e" | "i")
 }

@@ -52,8 +52,6 @@ macro_rules! apply {
 }
 
 impl Algebra {
-    pub const NAN: Algebra = Algebra::Number(number::Number::NAN);
-
     impl_is_method!(is_zero is_one is_negative is_nan is_infinite);
 
     pub fn op(&self, op: Op, rhs: &Algebra) -> Algebra {
@@ -72,35 +70,39 @@ impl Algebra {
                 (Number(a), Interval(b)) => Interval(b.interval_hull(&a.into())),
                 (Interval(a), Number(b)) => Interval(a.interval_hull(&b.into())),
                 (Interval(a), Interval(b)) => Interval(a.interval_hull(b)),
-                _ => Algebra::NAN,
+                _ => Algebra::nan(),
             },
             Op::BitAnd => match (self, rhs) {
                 (Number(a), Number(b)) => {
                     if a == b {
                         Interval(a.into())
                     } else {
-                        Algebra::NAN
+                        Algebra::nan()
                     }
                 }
                 (Number(a), Interval(b)) => {
                     if b.contains(a) {
                         Interval(a.into())
                     } else {
-                        Algebra::NAN
+                        Algebra::nan()
                     }
                 }
                 (Interval(a), Number(b)) => {
                     if a.contains(b) {
                         Interval(b.into())
                     } else {
-                        Algebra::NAN
+                        Algebra::nan()
                     }
                 }
                 (Interval(a), Interval(b)) => Interval(a.intersection(b)),
-                _ => Algebra::NAN,
+                _ => Algebra::nan(),
             },
             _ => unreachable!(),
         }
+    }
+
+    pub fn nan() -> Algebra {
+        Algebra::Number(number::Number::nan())
     }
 
     pub fn compare(&self, op: Op, other: &Algebra) -> bool {

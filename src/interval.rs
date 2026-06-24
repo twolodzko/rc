@@ -13,14 +13,6 @@ pub struct Interval {
 }
 
 impl Interval {
-    pub const NAN: Interval = Interval {
-        lower: Number::NAN,
-        upper: Number::NAN,
-    };
-    pub const INFINITY: Interval = Interval {
-        lower: Number::NEG_INFINITY,
-        upper: Number::INFINITY,
-    };
     pub const ZERO: Interval = Interval {
         lower: Number::ZERO,
         upper: Number::ZERO,
@@ -41,10 +33,24 @@ impl Interval {
         Ok(this)
     }
 
+    fn nan() -> Interval {
+        Interval {
+            lower: Number::nan(),
+            upper: Number::nan(),
+        }
+    }
+
+    fn inf() -> Interval {
+        Interval {
+            lower: Number::neg_inf(),
+            upper: Number::inf(),
+        }
+    }
+
     /// Create interval a~b ensuring that a <= b
     pub fn ordered(lhs: Number, rhs: Number) -> Interval {
         if lhs.is_nan() || rhs.is_nan() || lhs.is_complex() || rhs.is_complex() {
-            return Interval::NAN;
+            return Interval::nan();
         }
         if &lhs <= &rhs {
             Interval {
@@ -90,7 +96,7 @@ impl Interval {
 
     /// The interval ranges from -inf to inf
     pub fn is_infinite(&self) -> bool {
-        self.lower == Number::NEG_INFINITY && self.upper == Number::INFINITY
+        self.lower.is_infinite() && self.lower.is_negative() && self.upper.is_infinite()
     }
 
     /// The interval ranges from a to a
@@ -103,7 +109,7 @@ impl Interval {
         let lower = self.lower.max(&rhs.lower);
         let upper = self.upper.min(&rhs.upper);
         if lower > upper {
-            return Interval::NAN;
+            return Interval::nan();
         }
         Interval {
             lower: lower.clone(),
@@ -121,7 +127,7 @@ impl Interval {
 
     pub fn choose(&self, k: &Interval) -> Interval {
         if self.is_nan() || k.is_nan() {
-            return Interval::NAN;
+            return Interval::nan();
         }
         let (lower, upper) = self.min_max(k, |a, b| a.choose(b));
         Interval { lower, upper }
@@ -156,10 +162,10 @@ impl Add for &Interval {
 
     fn add(self, rhs: Self) -> Self::Output {
         if self.is_infinite() || rhs.is_infinite() {
-            return Interval::INFINITY;
+            return Interval::inf();
         }
         if self.is_nan() || rhs.is_nan() {
-            return Interval::NAN;
+            return Interval::nan();
         }
         Interval {
             lower: &self.lower + &rhs.lower,
@@ -173,10 +179,10 @@ impl Sub for &Interval {
 
     fn sub(self, rhs: Self) -> Self::Output {
         if self.is_infinite() || rhs.is_infinite() {
-            return Interval::INFINITY;
+            return Interval::inf();
         }
         if self.is_nan() || rhs.is_nan() {
-            return Interval::NAN;
+            return Interval::nan();
         }
         Interval {
             lower: &self.lower - &rhs.upper,
@@ -190,10 +196,10 @@ impl Mul for &Interval {
 
     fn mul(self, rhs: Self) -> Self::Output {
         if self.is_infinite() || rhs.is_infinite() {
-            return Interval::INFINITY;
+            return Interval::inf();
         }
         if self.is_nan() || rhs.is_nan() {
-            return Interval::NAN;
+            return Interval::nan();
         }
         if self.is_zero() || rhs.is_zero() {
             return Interval::ZERO;
@@ -218,16 +224,16 @@ impl Div for &Interval {
 
     fn div(self, rhs: Self) -> Self::Output {
         if self.is_infinite() || rhs.is_infinite() {
-            return Interval::INFINITY;
+            return Interval::inf();
         }
         if self.is_nan() || rhs.is_nan() {
-            return Interval::NAN;
+            return Interval::nan();
         }
         if self.is_zero() {
             return Interval::ZERO;
         }
         if rhs.is_zero() {
-            return Interval::NAN;
+            return Interval::nan();
         }
         if self.is_singular() {
             let a = self.lower.div(&rhs.lower);
@@ -250,16 +256,16 @@ impl Rem for &Interval {
     /// Calculates the widest bounds for the reminders
     fn rem(self, rhs: Self) -> Self::Output {
         if self.is_infinite() || rhs.is_infinite() {
-            return Interval::INFINITY;
+            return Interval::inf();
         }
         if self.is_nan() || rhs.is_nan() {
-            return Interval::NAN;
+            return Interval::nan();
         }
         if self.is_zero() {
             return Interval::ZERO;
         }
         if rhs.is_zero() {
-            return Interval::NAN;
+            return Interval::nan();
         }
         if self.is_singular() {
             let a = self.lower.rem(&rhs.lower);
@@ -316,10 +322,10 @@ impl Pow<&Interval> for &Interval {
 
     fn pow(self, rhs: &Interval) -> Self::Output {
         if self.is_infinite() || rhs.is_infinite() {
-            return Interval::INFINITY;
+            return Interval::inf();
         }
         if self.is_nan() || rhs.is_nan() {
-            return Interval::NAN;
+            return Interval::nan();
         }
         if rhs.is_zero() {
             return Interval {
@@ -370,7 +376,7 @@ impl Pow<&Interval> for &Interval {
         } else {
             // base can be anything, the exponent is negative
             // so it becomes 1/inf all the way to 1/-inf
-            Interval::INFINITY
+            Interval::inf()
         }
     }
 }
@@ -385,7 +391,7 @@ impl Pow<&Number> for &Interval {
         //  > (-2~2)^(3.1)
         //  NaN~NaN
         if self.is_infinite() || rhs.is_infinite() {
-            return Interval::INFINITY;
+            return Interval::inf();
         }
         if rhs.is_zero() {
             return Interval {
@@ -406,7 +412,7 @@ impl Pow<&Number> for &Interval {
             // positive exponent, so result is on the positive side
             let lower = Number::ZERO;
             let upper = if rhs.is_negative() {
-                Number::INFINITY
+                Number::inf()
             } else {
                 let a = self.lower.pow(rhs);
                 let b = self.upper.pow(rhs);
@@ -415,7 +421,7 @@ impl Pow<&Number> for &Interval {
             Interval { lower, upper }
         } else {
             if rhs.is_negative() {
-                Interval::INFINITY
+                Interval::inf()
             } else {
                 let a = self.lower.pow(rhs);
                 let b = self.upper.pow(rhs);
@@ -430,16 +436,16 @@ impl IntDiv for &Interval {
 
     fn idiv(self, rhs: &Interval) -> Self::Output {
         if self.is_infinite() || rhs.is_infinite() {
-            return Interval::INFINITY;
+            return Interval::inf();
         }
         if self.is_nan() || rhs.is_nan() {
-            return Interval::NAN;
+            return Interval::nan();
         }
         if self.is_zero() {
             return Interval::ZERO;
         }
         if rhs.is_zero() {
-            return Interval::NAN;
+            return Interval::nan();
         }
         if self.is_singular() {
             let a = self.lower.idiv(&rhs.lower);
@@ -460,7 +466,7 @@ impl Neg for &Interval {
     type Output = Interval;
 
     fn neg(self) -> Self::Output {
-        Interval::ordered(self.lower.neg(), self.upper.neg())
+        Interval::ordered(self.lower.clone().neg(), self.upper.clone().neg())
     }
 }
 

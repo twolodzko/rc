@@ -228,8 +228,8 @@ fn parse_primary(primary: Pair<'_, Rule>) -> Result<Expr> {
         Rule::term => parse_expr(primary.into_inner()),
         Rule::name => {
             let expr = match primary.as_str() {
-                "nan" => Expr::Value(Algebra::Number(Number::NAN)),
-                "inf" => Expr::Value(Algebra::Number(Number::INFINITY)),
+                "nan" => Expr::Value(Algebra::Number(Number::nan())),
+                "inf" => Expr::Value(Algebra::Number(Number::inf())),
                 _ => Expr::Variable(primary.to_string()),
             };
             Ok(expr)
@@ -238,11 +238,9 @@ fn parse_primary(primary: Pair<'_, Rule>) -> Result<Expr> {
             let s = primary.as_str();
             let number = if let Ok(value) = rug::Integer::from_str(s) {
                 Expr::Value(Algebra::Number(Number::Integer(value)))
-            } else if let Ok(value) = f64::from_str(s) {
-                let value = to_float(value);
-                Expr::Value(Algebra::Number(Number::Float(value)))
             } else {
-                Expr::Value(Algebra::Number(Number::NAN))
+                let value = rug::Float::parse(s)?;
+                Expr::Value(Algebra::Number(Number::Float(to_float(value))))
             };
             Ok(number)
         }
